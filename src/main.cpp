@@ -21,7 +21,7 @@ struct Player {
 };
 
 struct Game {
-	int PLAYER_TEXTURE;
+	Texture *playerTexture;
 
 	Player player;
 
@@ -56,7 +56,7 @@ void update() {
 		game->player.x = 100;
 		game->player.y = 100;
 
-		uploadPngTexturePath("assets/sprites/player.png");
+		game->playerTexture = uploadPngTexturePath("assets/sprites/player.png");
 
 		{ /// Parse frames
 #if 0
@@ -141,7 +141,8 @@ void update() {
 
 	/// Section: Render
 	clearRenderer();
-	drawCircle(player->x, player->y, 100, 0x2200FF00);
+	drawSprite(game->playerTexture, player->x, player->y);
+	// drawCircle(player->x, player->y, 100, 0x2200FF00);
 	swapBuffers();
 }
 

@@ -192,30 +192,37 @@ void drawCircle(float x, float y, float radius, int colour) {
 	CheckGlError();
 
 	glDrawArrays(GL_TRIANGLES, 0, 2*3);
+
+	glDisableVertexAttribArray(renderer->circleProgram.a_position);
+	glDisableVertexAttribArray(renderer->circleProgram.a_texCoord);
+
 	CheckGlError();
 }
 
-int uploadPngTexturePath(char *path) {
+Texture *uploadPngTexturePath(char *path) {
 	void *pngData;
 	int pngSize = readFile(path, &pngData);
-	int texId = uploadPngTexture(pngData, pngSize);
+	Texture *tex = uploadPngTexture(pngData, pngSize);
 	free(pngData);
 
-	return texId;
+	return tex;
 }
 
-int uploadPngTexture(void *data, int size) {
+Texture *uploadPngTexture(void *data, int size) {
 	int width, height, channels;
 	stbi_uc *img = stbi_load_from_memory((unsigned char *)data, size, &width, &height, &channels, 4);
-	assert(img);
+	Assert(img);
 
-	return uploadTexture(data, width, height);
+	Texture *tex = uploadTexture(img, width, height);
+	free(img);
+
+	return tex;
 }
 
-int uploadTexture(void *data, int width, int height) {
-	GLuint tex;
-	glGenTextures(1, &tex);
-	setTexture(tex);
+Texture *uploadTexture(void *data, int width, int height) {
+	GLuint texId;
+	glGenTextures(1, &texId);
+	setTexture(texId);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -230,19 +237,24 @@ int uploadTexture(void *data, int width, int height) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 	CheckGlError();
 
+	Texture *tex = (Texture *)malloc(sizeof(Texture));
+	tex->textureId = texId;
+	tex->width = width;
+	tex->height = height;
+
 	return tex;
 }
 
-void drawTexture(int textureID) {
-	// setGlViewport(0, 0, platform->windowWidth, platform->windowHeight);
-	// setShaderProgram(renderer->circleProgram.program);
-	// CheckGlError();
+void drawSprite(Texture *tex, float x, float y) {
+	setGlViewport(0, 0, platform->windowWidth, platform->windowHeight);
+	setShaderProgram(renderer->spriteProgram.program);
+	CheckGlError();
 
 	// x -= radius/2;
 	// y -= radius/2;
 
-	// glEnableVertexAttribArray(renderer->circleProgram.a_position);
-	// changeArrayBuffer(renderer->tempVerts, x, y, x+radius, y+radius);
+	// glEnableVertexAttribArray(renderer->spriteProgram.a_position);
+	// changeArrayBuffer(renderer->tempVerts, x, y, x, y);
 	// glVertexAttribPointer(renderer->circleProgram.a_position, 2, GL_FLOAT, false, 0, NULL);
 	// CheckGlError();
 
