@@ -6,7 +6,9 @@
 # include <windows.h>
 #endif
 
+#include "../lib/json.c"
 #include "mathTools.cpp"
+#include "jsonTools.cpp"
 
 #include "platform.cpp"
 #include "renderer.cpp"

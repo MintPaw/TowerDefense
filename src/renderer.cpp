@@ -56,8 +56,11 @@ void initRenderer() {
 	glBindVertexArray(vao);
 #endif
 
-	char *circleVertStr = (char *)readFile("assets/shaders/circle.vert");
-	char *circleFragStr = (char *)readFile("assets/shaders/circle.frag");
+	char *circleVertStr;
+	char *circleFragStr;
+	readFile("assets/shaders/circle.vert", (void **)&circleVertStr);
+	readFile("assets/shaders/circle.frag", (void **)&circleFragStr);
+
 	renderer->circleProgram.program = buildShader(circleVertStr, circleFragStr);
 	renderer->circleProgram.a_texCoord = glGetAttribLocation(renderer->circleProgram.program, "a_texCoord");
 	renderer->circleProgram.a_position = glGetAttribLocation(renderer->circleProgram.program, "a_position");

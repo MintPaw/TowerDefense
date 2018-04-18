@@ -110,7 +110,7 @@ void updateEvents() {
 	}
 }
 
-void *readFile(const char *filename) {
+long readFile(const char *filename, void **storage) {
 	FILE *filePtr = fopen(filename, "rb");
 	if (!filePtr) return NULL;
 
@@ -124,7 +124,9 @@ void *readFile(const char *filename) {
 
 	str[fileSize] = 0;
 
-	return str;
+	*storage = str;
+
+	return fileSize;
 }
 
 void log(const char *text, ...) {

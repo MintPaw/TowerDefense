@@ -10,6 +10,8 @@ struct Player {
 };
 
 struct Game {
+	Json *spriteJson;
+
 	Player player;
 };
 
@@ -39,6 +41,10 @@ void update() {
 
 		game->player.x = 100;
 		game->player.y = 100;
+
+		// char *jsonString = (char *)readFile("assets/sprites.json");
+		// game->spriteJson = parseJson(jsonString, strlen(jsonString));
+		// free(jsonString);
 	}
 
 	/// Section: Update
