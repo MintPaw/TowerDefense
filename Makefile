@@ -1,8 +1,14 @@
 GAME_NAME=TowerDefense
 
-ifneq (, $(findstring MSYS_NT, $(shell uname)))
 all:
+	$(MAKE) b
+	$(MAKE) r
+
+ifneq (, $(findstring MSYS_NT, $(shell uname)))
+b:
 	$(MAKE) bWindows
+
+r:
 	$(MAKE) rWindows
 
 debugC:

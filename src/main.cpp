@@ -52,8 +52,15 @@ void update() {
 	if (getKeyPressed('A')) moveLeft = true;
 	if (getKeyPressed('D')) moveRight = true;
 
-	// player->x += player->velo.x;
-	// player->y += player->velo.y;
+	float moveSpeed = 5;
+	Point playerMovePoint = {};
+	if (moveUp) playerMovePoint.y -= moveSpeed;
+	if (moveDown) playerMovePoint.y += moveSpeed;
+	if (moveLeft) playerMovePoint.x -= moveSpeed;
+	if (moveRight) playerMovePoint.x += moveSpeed;
+
+	player->x += playerMovePoint.x;
+	player->y += playerMovePoint.y;
 
 	/// Section: Render
 	clearRenderer();
