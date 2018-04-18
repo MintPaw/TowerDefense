@@ -11,7 +11,6 @@ vec4 fragColor;
 #endif
 
 uniform float u_alpha;
-uniform vec3 u_colour;
 uniform vec4 u_tint;
 uniform sampler2D u_texture;
 

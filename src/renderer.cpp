@@ -13,6 +13,13 @@ GLuint genGlArrayBuffer(float x, float y, float width, float height);
 void setTexture(GLuint texture);
 
 struct SpriteProgram {
+	GLuint program;
+	GLuint a_position;
+	GLuint a_texCoord;
+	GLuint u_matrix;
+	GLuint u_uv;
+	GLuint u_tint;
+	GLuint u_alpha;
 };
 
 struct CircleProgram {
@@ -24,10 +31,10 @@ struct CircleProgram {
 };
 
 struct Renderer {
-	GLuint spriteProgram;
 	int errorCount;
 
 	CircleProgram circleProgram;
+	SpriteProgram spriteProgram;
 
 	GLuint tempVerts;
 	GLuint tempTexCoords;
@@ -62,14 +69,29 @@ void initRenderer() {
 	char *circleFragStr;
 	readFile("assets/shaders/circle.vert", (void **)&circleVertStr);
 	readFile("assets/shaders/circle.frag", (void **)&circleFragStr);
-
 	renderer->circleProgram.program = buildShader(circleVertStr, circleFragStr);
-	renderer->circleProgram.a_texCoord = glGetAttribLocation(renderer->circleProgram.program, "a_texCoord");
-	renderer->circleProgram.a_position = glGetAttribLocation(renderer->circleProgram.program, "a_position");
-	renderer->circleProgram.u_colour = glGetUniformLocation(renderer->circleProgram.program, "u_colour");
-	renderer->circleProgram.u_projection = glGetUniformLocation(renderer->circleProgram.program, "u_projection");
 	free(circleFragStr);
 	free(circleVertStr);
+
+	renderer->circleProgram.a_position = glGetAttribLocation(renderer->circleProgram.program, "a_position");
+	renderer->circleProgram.a_texCoord = glGetAttribLocation(renderer->circleProgram.program, "a_texCoord");
+	renderer->circleProgram.u_colour = glGetUniformLocation(renderer->circleProgram.program, "u_colour");
+	renderer->circleProgram.u_projection = glGetUniformLocation(renderer->circleProgram.program, "u_projection");
+
+	char *spriteVertStr;
+	char *spriteFragStr;
+	readFile("assets/shaders/default.vert", (void **)&spriteVertStr);
+	readFile("assets/shaders/default.frag", (void **)&spriteFragStr);
+	renderer->spriteProgram.program = buildShader(spriteVertStr, spriteFragStr);
+	free(spriteFragStr);
+	free(spriteVertStr);
+
+	renderer->spriteProgram.a_position = glGetAttribLocation(renderer->spriteProgram.program, "a_position");
+	renderer->spriteProgram.a_texCoord = glGetAttribLocation(renderer->spriteProgram.program, "a_texCoord");
+	renderer->spriteProgram.u_matrix = glGetUniformLocation(renderer->spriteProgram.program, "u_matrix");
+	renderer->spriteProgram.u_uv = glGetUniformLocation(renderer->spriteProgram.program, "u_uv");
+	renderer->spriteProgram.u_tint = glGetUniformLocation(renderer->spriteProgram.program, "u_tint");
+	renderer->spriteProgram.u_alpha = glGetUniformLocation(renderer->spriteProgram.program, "u_alpha");
 
 	CheckGlError();
 
