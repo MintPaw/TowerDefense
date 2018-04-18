@@ -9,6 +9,7 @@
 #include "../lib/json.c"
 #include "mathTools.cpp"
 #include "jsonTools.cpp"
+#include "memoryTools.cpp"
 
 #include "platform.cpp"
 #include "renderer.cpp"

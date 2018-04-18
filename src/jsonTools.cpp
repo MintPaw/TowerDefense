@@ -1,12 +1,12 @@
 #include "jsonTools.h"
 #include "json.h"
 
-struct Json {
-	json_value_s *root;
-};
-
-Json *parseJson(const char *src, int len) {
-	Json *json = (Json *)malloc(sizeof(Json));
-	json->root = json_parse(src, len);
+json_value_s *parseJson(const void *src, int len) {
+	json_value_s *json = json_parse(src, len);
 	return json;
+}
+
+int getJsonLength(json_value_s *json) {
+	json_object_s *object = (json_object_s *)json->payload;
+	return object->length;
 }
