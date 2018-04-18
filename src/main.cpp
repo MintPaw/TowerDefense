@@ -55,6 +55,7 @@ void update() {
 		game->player.y = 100;
 
 		{ /// Parse frames
+#if 0
 			void *jsonData;
 			long jsonSize = readFile("assets/sprites.json", &jsonData);
 			json_value_s *json = json_parse(jsonData, jsonSize);
@@ -109,6 +110,7 @@ void update() {
 				Frame *frame = &game->spriteFrames[i];
 				// printf("Frame is: %s %d, %d, %d, %d (%d, %d)\n", frame->name, frame->x, frame->y, frame->width, frame->height, frame->sourceWidth, frame->sourceHeight);
 			}
+#endif
 		}
 	}
 

@@ -17,7 +17,8 @@ debugC:
 	cmd /c "devenv /Run bin\${GAME_NAME}.exe"
 
 packSprites:
-	-cmd /c "D:\_tools\SpriteSheetPacker\SpriteSheetPacker.exe --powerOf2 --format json raw/sprites assets"
+	cp -r raw/sprites assets
+	# -cmd /c "D:\_tools\SpriteSheetPacker\SpriteSheetPacker.exe --powerOf2 --format json raw/sprites assets"
 
 endif
 
