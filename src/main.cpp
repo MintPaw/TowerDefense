@@ -21,6 +21,8 @@ struct Player {
 };
 
 struct Game {
+	int PLAYER_TEXTURE;
+
 	Player player;
 
 	Frame *spriteFrames;
@@ -53,6 +55,8 @@ void update() {
 
 		game->player.x = 100;
 		game->player.y = 100;
+
+		uploadPngTexturePath("assets/sprites/player.png");
 
 		{ /// Parse frames
 #if 0

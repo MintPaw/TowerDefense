@@ -10,6 +10,7 @@ void setShaderProgram(GLuint program);
 void setArrayBuffer(GLuint buffer);
 void changeArrayBuffer(GLuint glBuffer, float x, float y, float width, float height);
 GLuint genGlArrayBuffer(float x, float y, float width, float height);
+void setTexture(GLuint texture);
 
 struct SpriteProgram {
 };
@@ -34,6 +35,7 @@ struct Renderer {
 	Rect curViewport;
 	GLuint curShaderProgram;
 	GLuint curArrayBuffer;
+	GLint currentTexture;
 };
 
 Renderer *renderer;
@@ -171,6 +173,80 @@ void drawCircle(float x, float y, float radius, int colour) {
 	CheckGlError();
 }
 
+int uploadPngTexturePath(char *path) {
+	void *pngData;
+	int pngSize = readFile(path, &pngData);
+	int texId = uploadPngTexture(pngData, pngSize);
+	free(pngData);
+
+	return texId;
+}
+
+int uploadPngTexture(void *data, int size) {
+	int width, height, channels;
+	stbi_uc *img = stbi_load_from_memory((unsigned char *)data, size, &width, &height, &channels, 4);
+	assert(img);
+
+	return uploadTexture(data, width, height);
+}
+
+int uploadTexture(void *data, int width, int height) {
+	GLuint tex;
+	glGenTextures(1, &tex);
+	setTexture(tex);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	if (!data) {
+		data = malloc(width * height * 4);
+		memset(data, 0, width * height * 4);
+	}
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	CheckGlError();
+
+	return tex;
+}
+
+void drawTexture(int textureID) {
+	// setGlViewport(0, 0, platform->windowWidth, platform->windowHeight);
+	// setShaderProgram(renderer->circleProgram.program);
+	// CheckGlError();
+
+	// x -= radius/2;
+	// y -= radius/2;
+
+	// glEnableVertexAttribArray(renderer->circleProgram.a_position);
+	// changeArrayBuffer(renderer->tempVerts, x, y, x+radius, y+radius);
+	// glVertexAttribPointer(renderer->circleProgram.a_position, 2, GL_FLOAT, false, 0, NULL);
+	// CheckGlError();
+
+	// glEnableVertexAttribArray(renderer->circleProgram.a_texCoord);
+	// changeArrayBuffer(renderer->tempTexCoords, 0, 0, 1, 1);
+	// glVertexAttribPointer(renderer->circleProgram.a_texCoord, 2, GL_FLOAT, false, 0, NULL);
+	// CheckGlError();
+
+	// Matrix projection;
+	// projection.identity();
+	// projection.project(platform->windowWidth, platform->windowHeight);
+	// glUniformMatrix3fv(renderer->circleProgram.u_projection, 1, false, (float *)projection.data);
+
+	// glUniform4f(
+	// 	renderer->circleProgram.u_colour,
+	// 	((colour >> 16) & 0xff)/255.0,
+	// 	((colour >> 8) & 0xff)/255.0,
+	// 	(colour & 0xff)/255.0,
+	// 	((colour >> 24) & 0xff)/255.0
+	// );
+	// CheckGlError();
+
+	// glDrawArrays(GL_TRIANGLES, 0, 2*3);
+	// CheckGlError();
+}
+
 void clearRenderer() {
 	// setFramebuffer(0);
 	// setViewport(0, 0, engine->width, engine->height);
@@ -224,6 +300,15 @@ GLuint genGlArrayBuffer(float x, float y, float width, float height) {
 	changeArrayBuffer(buffer, x, y, width, height);
 	return buffer;
 }
+
+void setTexture(GLuint texture) {
+	if (renderer->currentTexture == texture) return;
+	renderer->currentTexture = texture;
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	CheckGlError();
+}
+
 
 void checkGlError(int lineNum) {
 	GLenum err;

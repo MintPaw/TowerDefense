@@ -6,7 +6,10 @@
 # include <windows.h>
 #endif
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "../lib/stb_image.h"
 #include "../lib/json.c"
+
 #include "mathTools.cpp"
 #include "memoryTools.cpp"
 
