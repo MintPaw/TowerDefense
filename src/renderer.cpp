@@ -203,18 +203,19 @@ Texture *uploadPngTexturePath(char *path) {
 	void *pngData;
 	int pngSize = readFile(path, &pngData);
 	Texture *tex = uploadPngTexture(pngData, pngSize);
-	free(pngData);
+	// free(pngData);
 
 	return tex;
 }
 
 Texture *uploadPngTexture(void *data, int size) {
 	int width, height, channels;
-	stbi_uc *img = stbi_load_from_memory((unsigned char *)data, size, &width, &height, &channels, 4);
+	stbi_uc *img = 0;
+	img = stbi_load_from_memory((unsigned char *)data, size, &width, &height, &channels, 4);
 	Assert(img);
 
 	Texture *tex = uploadTexture(img, width, height);
-	free(img);
+	// free(img);
 
 	return tex;
 }
@@ -223,6 +224,7 @@ Texture *uploadTexture(void *data, int width, int height) {
 	GLuint texId;
 	glGenTextures(1, &texId);
 	setTexture(texId);
+	printf("Doing this stuff...");
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -253,32 +255,42 @@ void drawSprite(Texture *tex, float x, float y) {
 	// x -= radius/2;
 	// y -= radius/2;
 
-	// glEnableVertexAttribArray(renderer->spriteProgram.a_position);
-	// changeArrayBuffer(renderer->tempVerts, x, y, x, y);
-	// glVertexAttribPointer(renderer->circleProgram.a_position, 2, GL_FLOAT, false, 0, NULL);
-	// CheckGlError();
+	glEnableVertexAttribArray(renderer->spriteProgram.a_position);
+	changeArrayBuffer(renderer->tempVerts, 0, 0, tex->width, tex->height);
+	glVertexAttribPointer(renderer->spriteProgram.a_position, 2, GL_FLOAT, false, 0, NULL);
+	CheckGlError();
 
-	// glEnableVertexAttribArray(renderer->circleProgram.a_texCoord);
-	// changeArrayBuffer(renderer->tempTexCoords, 0, 0, 1, 1);
-	// glVertexAttribPointer(renderer->circleProgram.a_texCoord, 2, GL_FLOAT, false, 0, NULL);
-	// CheckGlError();
+	glEnableVertexAttribArray(renderer->spriteProgram.a_texCoord);
+	changeArrayBuffer(renderer->tempTexCoords, 0, 0, 1, 1);
+	glVertexAttribPointer(renderer->spriteProgram.a_texCoord, 2, GL_FLOAT, false, 0, NULL);
+	CheckGlError();
 
-	// Matrix projection;
-	// projection.identity();
-	// projection.project(platform->windowWidth, platform->windowHeight);
-	// glUniformMatrix3fv(renderer->circleProgram.u_projection, 1, false, (float *)projection.data);
+	Matrix projection;
+	projection.identity();
+	projection.project(platform->windowWidth, platform->windowHeight);
+	glUniformMatrix3fv(renderer->spriteProgram.u_matrix, 1, false, (float *)projection.data);
 
-	// glUniform4f(
-	// 	renderer->circleProgram.u_colour,
-	// 	((colour >> 16) & 0xff)/255.0,
-	// 	((colour >> 8) & 0xff)/255.0,
-	// 	(colour & 0xff)/255.0,
-	// 	((colour >> 24) & 0xff)/255.0
-	// );
-	// CheckGlError();
+	setTexture(tex->textureId);
 
-	// glDrawArrays(GL_TRIANGLES, 0, 2*3);
-	// CheckGlError();
+	Matrix uv;
+	uv.identity();
+	glUniformMatrix3fv(renderer->spriteProgram.u_uv, 1, false, (float *)uv.data);
+
+	int tint = 0x00000000;
+	glUniform4f(
+		renderer->spriteProgram.u_tint,
+		((tint >> 16) & 0xff)/255.0,
+		((tint >> 8) & 0xff)/255.0,
+		(tint & 0xff)/255.0,
+		((tint >> 24) & 0xff)/255.0
+	);
+
+	glUniform1f(renderer->spriteProgram.u_alpha, 1);
+
+	CheckGlError();
+
+	glDrawArrays(GL_TRIANGLES, 0, 2*3);
+	CheckGlError();
 }
 
 void clearRenderer() {

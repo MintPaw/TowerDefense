@@ -15,6 +15,8 @@ uniform vec4 u_tint;
 uniform sampler2D u_texture;
 
 void main(void) { 
+	// fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+	// return;
 
 	fragColor = TEXTURE2D(u_texture, v_texCoord);
 	if (fragColor.a != 0) {
