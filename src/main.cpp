@@ -1,8 +1,22 @@
 #include "platform.h"
 #include "renderer.h"
 
+#define TURRETS_MAX 1024
+
 void update();
 bool getKeyPressed(int key);
+
+enum TurretType { TURRET_BASIC };
+enum InvType { INV_HANDS, INV_TURRET_BASIC, INV_FINAL };
+
+struct Turret {
+	bool exists;
+	TurretType type;
+	Texture *baseTex;
+	Texture *gunTex;
+	float x;
+	float y;
+};
 
 struct Frame {
 	char *name;
@@ -26,6 +40,10 @@ struct Game {
 	tinytiled_map_t *tiledMap; 
 	Texture *tilesetTexture;
 	Texture *mapTexture;
+
+	Turret turrets[TURRETS_MAX];
+
+	InvType currentInv;
 
 	Player player;
 
@@ -153,20 +171,36 @@ void update() {
 	bool moveDown = false;
 	bool moveLeft = false;
 	bool moveRight = false;
+	bool invLeft = false;
+	bool invRight = false;
 	if (getKeyPressed('W')) moveUp = true;
 	if (getKeyPressed('S')) moveDown = true;
 	if (getKeyPressed('A')) moveLeft = true;
 	if (getKeyPressed('D')) moveRight = true;
 
-	float moveSpeed = 5;
-	Point playerMovePoint = {};
-	if (moveUp) playerMovePoint.y -= moveSpeed;
-	if (moveDown) playerMovePoint.y += moveSpeed;
-	if (moveLeft) playerMovePoint.x -= moveSpeed;
-	if (moveRight) playerMovePoint.x += moveSpeed;
+	if (platform->keys['Q'] == KEY_JUST_PRESSED) invLeft = true;
+	if (platform->keys['E'] == KEY_JUST_PRESSED) invRight = true;
 
-	player->x += playerMovePoint.x;
-	player->y += playerMovePoint.y;
+	{ /// Inventory
+		if (invLeft) game->currentInv = (InvType)(game->currentInv + 1);
+		if (invRight) game->currentInv = (InvType)(game->currentInv - 1);
+
+		if (game->currentInv <= (InvType)-1) game->currentInv = (InvType)(INV_FINAL-1);
+		if (game->currentInv >= INV_FINAL) game->currentInv = INV_HANDS;
+		printf("inv: %d\n", game->currentInv);
+	}
+
+	{ /// Movement
+		float moveSpeed = 5;
+		Point playerMovePoint = {};
+		if (moveUp) playerMovePoint.y -= moveSpeed;
+		if (moveDown) playerMovePoint.y += moveSpeed;
+		if (moveLeft) playerMovePoint.x -= moveSpeed;
+		if (moveRight) playerMovePoint.x += moveSpeed;
+
+		player->x += playerMovePoint.x;
+		player->y += playerMovePoint.y;
+	}
 
 	/// Section: Render
 	clearRenderer();
@@ -188,6 +222,7 @@ void update() {
 		def.pos.y = player->y;
 		drawSpriteEx(&def);
 	}
+
 	swapBuffers();
 }
 
