@@ -22,7 +22,10 @@ struct Player {
 
 struct Game {
 	Texture *playerTexture;
+
 	tinytiled_map_t *tiledMap; 
+	Texture *tilesetTexture;
+	Texture *mapTexture;
 
 	Player player;
 
@@ -59,13 +62,17 @@ void update() {
 
 		game->playerTexture = uploadPngTexturePath("assets/sprites/player.png");
 
-		{ /// Parse map
+		{ /// Setup map
+			game->tilesetTexture = uploadPngTexturePath("assets/tilesets/tileset.png");
+
 			void *mapData;
 			long mapSize = readFile("assets/maps/map.json", &mapData);
 			game->tiledMap = tinytiled_load_map_from_memory(mapData, mapSize, 0);
 
 			int w = game->tiledMap->width;
 			int h = game->tiledMap->height;
+
+			game->mapTexture = uploadTexture(NULL, game->tiledMap->width * game->tiledMap->tilewidth, game->tiledMap->height * game->tiledMap->tileheight);
 
 			tinytiled_layer_t *layer = game->tiledMap->layers;
 			while (layer) {
@@ -75,7 +82,7 @@ void update() {
 				for (int i = 0; i < dataNum; i++) {
 					// printf("Data: %d\n", data[i]);
 				}
-				// UserFunction_HandleTiles(data, data_count);
+				drawTiles(game->tilesetTexture, game->mapTexture, game->tiledMap->tilewidth, game->tiledMap->tileheight, game->tiledMap->width, game->tiledMap->height, data);
 				layer = layer->next;
 			}
 		}
@@ -163,6 +170,7 @@ void update() {
 
 	/// Section: Render
 	clearRenderer();
+	drawSprite(game->mapTexture, 0, 0);
 	drawSprite(game->playerTexture, player->x, player->y);
 	// drawCircle(player->x, player->y, 100, 0x2200FF00);
 	swapBuffers();
