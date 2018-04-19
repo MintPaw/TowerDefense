@@ -299,6 +299,10 @@ void drawSprite(Texture *tex, float x, float y) {
 	drawSpriteEx(&def);
 }
 
+void defaultSpriteDef(SpriteDef *def) {
+	memset(def, 0, sizeof(SpriteDef));
+}
+
 void drawSpriteEx(SpriteDef *def) {
 	setGlViewport(0, 0, platform->windowWidth, platform->windowHeight);
 	setShaderProgram(renderer->spriteProgram.program);

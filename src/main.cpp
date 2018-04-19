@@ -171,9 +171,22 @@ void update() {
 	/// Section: Render
 	clearRenderer();
 	// setRendererCameraPosition(
-	drawSprite(game->mapTexture, 0, 0);
-	drawSprite(game->playerTexture, player->x, player->y);
-	// drawCircle(player->x, player->y, 100, 0x2200FF00);
+
+	{ /// Draw map
+		SpriteDef def;
+		defaultSpriteDef(&def);
+		def.tex = game->mapTexture;
+		drawSpriteEx(&def);
+	}
+
+	{ /// Draw player
+		SpriteDef def;
+		defaultSpriteDef(&def);
+		def.tex = game->playerTexture;
+		def.pos.x = player->x;
+		def.pos.y = player->y;
+		drawSpriteEx(&def);
+	}
 	swapBuffers();
 }
 

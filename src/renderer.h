@@ -20,4 +20,5 @@ Texture *uploadPngTexture(void *data, int size);
 Texture *uploadTexture(void *data, int width, int height);
 void destroyTexture(Texture *tex);
 void drawSprite(Texture *tex, float x, float y);
+void defaultSpriteDef(SpriteDef *def);
 void drawSpriteEx(SpriteDef *def);
