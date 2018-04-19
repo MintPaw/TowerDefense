@@ -170,7 +170,8 @@ void update() {
 
 	/// Section: Render
 	clearRenderer();
-	// setRendererCameraPosition(
+	setCameraExtents(0, 0, game->mapTexture->width, game->mapTexture->height);
+	setCameraPosition(player->x - platform->windowWidth/2 + game->playerTexture->width/2, player->y - platform->windowHeight/2 + game->playerTexture->height/2);
 
 	{ /// Draw map
 		SpriteDef def;

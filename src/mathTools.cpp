@@ -1,5 +1,8 @@
 #include "mathTools.h"
 
+#define Min(x, y) ((x) < (y) ? (x) : (y))
+#define Max(x, y) ((x) > (y) ? (x) : (y))
+
 void Rect::setTo(float x, float y, float width, float height) {
 	this->x = x;
 	this->y = y;

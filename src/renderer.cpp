@@ -64,8 +64,8 @@ struct Renderer {
 	GLuint currentFramebufferTexture;
 	Rect currentViewport;
 
-	float camX;
-	float camY;
+	Rect camExtents;
+	Point camPos;
 };
 
 Renderer *renderer;
@@ -301,6 +301,7 @@ void drawSprite(Texture *tex, float x, float y) {
 
 void defaultSpriteDef(SpriteDef *def) {
 	memset(def, 0, sizeof(SpriteDef));
+	def->scrollFactor.setTo(1, 1);
 }
 
 void drawSpriteEx(SpriteDef *def) {
@@ -318,10 +319,13 @@ void drawSpriteEx(SpriteDef *def) {
 	glVertexAttribPointer(renderer->spriteProgram.a_texCoord, 2, GL_FLOAT, false, 0, NULL);
 	CheckGlError();
 
+	Point camOff;
+	camOff.setTo(renderer->camPos.x * def->scrollFactor.x, renderer->camPos.y * def->scrollFactor.y);
+
 	Matrix matrix;
 	matrix.identity();
 	matrix.project(platform->windowWidth, platform->windowHeight);
-	matrix.translate(def->pos.x, def->pos.y);
+	matrix.translate(def->pos.x - camOff.x, def->pos.y - camOff.y);
 	glUniformMatrix3fv(renderer->spriteProgram.u_matrix, 1, false, (float *)matrix.data);
 
 	setTexture(def->tex->textureId);
@@ -406,7 +410,7 @@ void drawTiles(Texture *srcTexture, Texture *destTexture, int tileWidth, int til
 
 	glUniform2i(renderer->tilemapProgram.u_tilemapSize, tilesWide, tilesHigh);
 	glUniform2i(renderer->tilemapProgram.u_tilesetSize, srcTexture->width, srcTexture->height);
-	glUniform2i(renderer->tilemapProgram.u_resultSize, (float)tilesWide*tileWidth, (float)tilesHigh*tileHeight);
+	glUniform2i(renderer->tilemapProgram.u_resultSize, tilesWide*tileWidth, tilesHigh*tileHeight);
 	glUniform2i(renderer->tilemapProgram.u_pixelRatio, tileWidth, tileHeight);
 
 	glDrawArrays(GL_TRIANGLES, 0, 2*3);
@@ -422,9 +426,17 @@ void clearRenderer() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void setRendererCameraPosition(float x, float y) {
-	renderer->camX = x;
-	renderer->camY = y;
+void setCameraExtents(float x, float y, float width, float height) {
+	renderer->camExtents.setTo(x, y, width, height);
+};
+
+void setCameraPosition(float x, float y) {
+	renderer->camPos.setTo(x, y);
+
+	renderer->camPos.x = Min(renderer->camPos.x, renderer->camExtents.width - platform->windowWidth);
+	renderer->camPos.y = Min(renderer->camPos.y, renderer->camExtents.height - platform->windowHeight);
+	renderer->camPos.x = Max(renderer->camPos.x, renderer->camExtents.x);
+	renderer->camPos.y = Max(renderer->camPos.y, renderer->camExtents.y);
 }
 
 void setGlViewport(int x, int y, int width, int height) {

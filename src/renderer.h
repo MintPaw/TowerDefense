@@ -22,3 +22,4 @@ void destroyTexture(Texture *tex);
 void drawSprite(Texture *tex, float x, float y);
 void defaultSpriteDef(SpriteDef *def);
 void drawSpriteEx(SpriteDef *def);
+void setCameraPosition(float x, float y);
