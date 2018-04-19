@@ -6,6 +6,12 @@ struct Texture {
 	int height;
 };
 
+struct SpriteDef {
+	Texture *tex;
+	Point pos;
+	Point scrollFactor;
+};
+
 void initRenderer();
 void clearRenderer();
 void drawCircle(float x, float y, float radius, int colour);
@@ -14,3 +20,4 @@ Texture *uploadPngTexture(void *data, int size);
 Texture *uploadTexture(void *data, int width, int height);
 void destroyTexture(Texture *tex);
 void drawSprite(Texture *tex, float x, float y);
+void drawSpriteEx(SpriteDef *def);

@@ -63,6 +63,9 @@ struct Renderer {
 	GLuint currentFramebuffer;
 	GLuint currentFramebufferTexture;
 	Rect currentViewport;
+
+	float camX;
+	float camY;
 };
 
 Renderer *renderer;
@@ -290,15 +293,19 @@ void destroyTexture(Texture *tex) {
 }
 
 void drawSprite(Texture *tex, float x, float y) {
+	SpriteDef def;
+	def.tex = tex;
+	def.pos.setTo(x, y);
+	drawSpriteEx(&def);
+}
+
+void drawSpriteEx(SpriteDef *def) {
 	setGlViewport(0, 0, platform->windowWidth, platform->windowHeight);
 	setShaderProgram(renderer->spriteProgram.program);
 	CheckGlError();
 
-	// x -= radius/2;
-	// y -= radius/2;
-
 	glEnableVertexAttribArray(renderer->spriteProgram.a_position);
-	changeArrayBuffer(renderer->tempVerts, 0, 0, tex->width, tex->height);
+	changeArrayBuffer(renderer->tempVerts, 0, 0, def->tex->width, def->tex->height);
 	glVertexAttribPointer(renderer->spriteProgram.a_position, 2, GL_FLOAT, false, 0, NULL);
 	CheckGlError();
 
@@ -310,10 +317,10 @@ void drawSprite(Texture *tex, float x, float y) {
 	Matrix matrix;
 	matrix.identity();
 	matrix.project(platform->windowWidth, platform->windowHeight);
-	matrix.translate(x, y);
+	matrix.translate(def->pos.x, def->pos.y);
 	glUniformMatrix3fv(renderer->spriteProgram.u_matrix, 1, false, (float *)matrix.data);
 
-	setTexture(tex->textureId);
+	setTexture(def->tex->textureId);
 
 	Matrix uv;
 	uv.identity();
@@ -338,6 +345,7 @@ void drawSprite(Texture *tex, float x, float y) {
 	glDisableVertexAttribArray(renderer->spriteProgram.a_position);
 	glDisableVertexAttribArray(renderer->spriteProgram.a_texCoord);
 	CheckGlError();
+
 }
 
 void drawTiles(Texture *srcTexture, Texture *destTexture, int tileWidth, int tileHeight, int tilesWide, int tilesHigh, int *tiles) {
@@ -408,6 +416,11 @@ void clearRenderer() {
 	setFramebuffer(0);
 	setViewport(0, 0, platform->windowWidth, platform->windowWidth);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+void setRendererCameraPosition(float x, float y) {
+	renderer->camX = x;
+	renderer->camY = y;
 }
 
 void setGlViewport(int x, int y, int width, int height) {

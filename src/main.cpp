@@ -170,6 +170,7 @@ void update() {
 
 	/// Section: Render
 	clearRenderer();
+	// setRendererCameraPosition(
 	drawSprite(game->mapTexture, 0, 0);
 	drawSprite(game->playerTexture, player->x, player->y);
 	// drawCircle(player->x, player->y, 100, 0x2200FF00);
