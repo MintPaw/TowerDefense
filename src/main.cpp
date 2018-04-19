@@ -22,6 +22,7 @@ struct Player {
 
 struct Game {
 	Texture *playerTexture;
+	tinytiled_map_t *tiledMap; 
 
 	Player player;
 
@@ -57,6 +58,27 @@ void update() {
 		game->player.y = 100;
 
 		game->playerTexture = uploadPngTexturePath("assets/sprites/player.png");
+
+		{ /// Parse map
+			void *mapData;
+			long mapSize = readFile("assets/maps/map.json", &mapData);
+			game->tiledMap = tinytiled_load_map_from_memory(mapData, mapSize, 0);
+
+			int w = game->tiledMap->width;
+			int h = game->tiledMap->height;
+
+			tinytiled_layer_t *layer = game->tiledMap->layers;
+			while (layer) {
+				int *data = layer->data;
+				int dataNum = layer->data_count;
+
+				for (int i = 0; i < dataNum; i++) {
+					// printf("Data: %d\n", data[i]);
+				}
+				// UserFunction_HandleTiles(data, data_count);
+				layer = layer->next;
+			}
+		}
 
 		{ /// Parse frames
 #if 0

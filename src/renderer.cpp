@@ -30,11 +30,23 @@ struct CircleProgram {
 	GLuint u_projection;
 };
 
+struct TilemapProgram {
+	GLuint program;
+	GLuint a_position;
+	GLuint u_tilesetTexture;
+	GLuint u_tilemapTexture;
+	GLuint u_tilesetSize;
+	GLuint u_tilemapSize;
+	GLuint u_resultSize;
+	GLuint u_pixelRatio;
+};
+
 struct Renderer {
 	int errorCount;
 
 	CircleProgram circleProgram;
 	SpriteProgram spriteProgram;
+	TilemapProgram tilemapProgram;
 
 	GLuint tempVerts;
 	GLuint tempTexCoords;
@@ -92,6 +104,22 @@ void initRenderer() {
 	renderer->spriteProgram.u_uv = glGetUniformLocation(renderer->spriteProgram.program, "u_uv");
 	renderer->spriteProgram.u_tint = glGetUniformLocation(renderer->spriteProgram.program, "u_tint");
 	renderer->spriteProgram.u_alpha = glGetUniformLocation(renderer->spriteProgram.program, "u_alpha");
+
+	char *tilemapVertStr;
+	char *tilemapFragStr;
+	readFile("assets/shaders/tilemap.vert", (void **)&tilemapVertStr);
+	readFile("assets/shaders/tilemap.frag", (void **)&tilemapFragStr);
+	renderer->tilemapProgram.program = buildShader(tilemapVertStr, tilemapFragStr);
+	free(tilemapFragStr);
+	free(tilemapVertStr);
+
+	renderer->tilemapProgram.a_position = glGetAttribLocation(renderer->tilemapProgram.program, "a_position");
+	renderer->tilemapProgram.u_tilesetTexture = glGetUniformLocation(renderer->tilemapProgram.program, "u_tilesetTexture");
+	renderer->tilemapProgram.u_tilemapTexture = glGetUniformLocation(renderer->tilemapProgram.program, "u_tilemapTexture");
+	renderer->tilemapProgram.u_tilesetSize = glGetUniformLocation(renderer->tilemapProgram.program, "u_tilesetSize");
+	renderer->tilemapProgram.u_tilemapSize = glGetUniformLocation(renderer->tilemapProgram.program, "u_tilemapSize");
+	renderer->tilemapProgram.u_resultSize = glGetUniformLocation(renderer->tilemapProgram.program, "u_resultSize");
+	renderer->tilemapProgram.u_pixelRatio = glGetUniformLocation(renderer->tilemapProgram.program, "u_pixelRatio");
 
 	CheckGlError();
 
@@ -224,7 +252,6 @@ Texture *uploadTexture(void *data, int width, int height) {
 	GLuint texId;
 	glGenTextures(1, &texId);
 	setTexture(texId);
-	printf("Doing this stuff...");
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -245,6 +272,11 @@ Texture *uploadTexture(void *data, int width, int height) {
 	tex->height = height;
 
 	return tex;
+}
+
+void destroyTexture(Texture *tex) {
+	glDeleteTextures(1, &tex->textureId);
+	free(tex);
 }
 
 void drawSprite(Texture *tex, float x, float y) {
@@ -292,6 +324,65 @@ void drawSprite(Texture *tex, float x, float y) {
 
 	glDrawArrays(GL_TRIANGLES, 0, 2*3);
 	CheckGlError();
+}
+
+void drawTiles(Texture *srcTexture, Texture *destTexture, int tileWidth, int tileHeight, int tilesWide, int tilesHigh, int *tiles) {
+	unsigned char *texData = (unsigned char *)malloc(tilesWide * tilesHigh * 4);
+
+	memset(texData, 0, tilesWide * tilesHigh * 4);
+	for (int i = 0; i < tilesWide * tilesHigh; i++) {
+		texData[i*4 + 0] = ((tiles[i]) & 0xff);
+		texData[i*4 + 1] = ((tiles[i] >> 8) & 0xff);
+		// texData[i*4 + 2] = ((tiles[i] >> 16) & 0xff);
+		// texData[i*4 + 3] = ((tiles[i] >> 24) & 0xff);
+		// printf("%d %d\n", texData[i*4 + 0], texData[i*4 + 1]);
+	}
+
+	Texture *tempTex = uploadTexture(texData, tilesWide, tilesHigh);
+	// checkGlError(__LINE__, "generated tile data texture");
+	// Free(texData);
+
+	// Asset *tilesetTextureAsset = getTextureAsset(assetId);
+
+	// setFramebuffer(renderer->textureFramebuffer);
+	// checkGlError(__LINE__, "");
+	// setFramebufferTexture(spr->texture);
+	// checkGlError(__LINE__, "");
+	// // if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) printf("Framebuffer is not ready!\n");
+
+	// setShaderProgram(&renderer->tilemapProgram);
+	// checkGlError(__LINE__, "");
+	// setViewport(0, 0, spr->width, spr->height);
+
+	// glEnableVertexAttribArray(renderer->tm_a_position);
+	// setArrayBuffer(spr->vertexBuffer);
+	// glVertexAttribPointer(renderer->tm_a_position, 2, GL_FLOAT, false, 0, 0);
+	// checkGlError(__LINE__, "");
+
+	// Matrix projectMat;
+	// matrixIdentity(&projectMat);
+	// checkGlError(__LINE__, "");
+	// matrixProject(&projectMat, renderer->currentViewport.width, renderer->currentViewport.height);
+	// // matrixScale(&projectMat, engineWidth/engineCamera.width,  engineHeight/engineCamera.height);
+	// // if (sprite->scrolls) matrixTranslate(&projectMat, -engineCamera.x, -engineCamera.y);
+	// glUniformMatrix3fv(renderer->tm_u_matrix, 1, false, (float *)(&projectMat.data));
+	// checkGlError(__LINE__, "");
+
+	// setTexture(tempTex, 0);
+	// glUniform1i(renderer->tm_u_tilemapTexture, 0);
+
+	// setTexture(tilesetTextureAsset->glTexture, 1);
+	// glUniform1i(renderer->tm_u_tilesetTexture, 1);
+
+	// glUniform2i(renderer->tm_u_tilemapSize, tilesWide, tilesHigh);
+	// glUniform2i(renderer->tm_u_tilesetSize, tilesetTextureAsset->width, tilesetTextureAsset->height);
+	// glUniform2i(renderer->tm_u_resultSize, (float)tilesWide*tileWidth, (float)tilesHigh*tileHeight);
+	// glUniform2i(renderer->tm_u_pixelRatio, tileWidth, tileHeight);
+
+	// glDrawArrays(GL_TRIANGLES, 0, 2*3);
+	destroyTexture(tempTex);
+	// checkGlError(__LINE__, "end of drawTilesFast");
+
 }
 
 void clearRenderer() {
