@@ -48,6 +48,15 @@ void Matrix::setTo(float a, float b, float c, float d, float e, float f, float g
 	this->data[8] = i;
 }
 
+void Matrix::translate(float x, float y) {
+	float array[9] = {
+		1, 0, 0,
+		0, 1, 0,
+		x, y, 1
+	};
+	this->multiply(array);
+}
+
 void Matrix::multiply(float *array) {
 	float temp[9] = {};
 

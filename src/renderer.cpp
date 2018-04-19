@@ -265,10 +265,11 @@ void drawSprite(Texture *tex, float x, float y) {
 	glVertexAttribPointer(renderer->spriteProgram.a_texCoord, 2, GL_FLOAT, false, 0, NULL);
 	CheckGlError();
 
-	Matrix projection;
-	projection.identity();
-	projection.project(platform->windowWidth, platform->windowHeight);
-	glUniformMatrix3fv(renderer->spriteProgram.u_matrix, 1, false, (float *)projection.data);
+	Matrix matrix;
+	matrix.identity();
+	matrix.project(platform->windowWidth, platform->windowHeight);
+	matrix.translate(x, y);
+	glUniformMatrix3fv(renderer->spriteProgram.u_matrix, 1, false, (float *)matrix.data);
 
 	setTexture(tex->textureId);
 

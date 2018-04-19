@@ -18,6 +18,7 @@ struct Matrix {
 	void identity();
 	void project(float width, float height);
 	void multiply(float *array);
+	void translate(float x, float y);
 };
 
 struct Point {
