@@ -23,6 +23,8 @@ struct Platform {
 	bool running;
 
 	KeyState keys[KEY_LIMIT];
+	int mouseX;
+	int mouseY;
 };
 
 Platform *platform;
@@ -99,7 +101,7 @@ void updateEvents() {
 				platform->keys[key] = KEY_JUST_RELEASED;
 			}	
 		}	else if (e.type == SDL_MOUSEMOTION) {
-			// SDL_GetMouseState(&platformMouseX, &platformMouseY);
+			SDL_GetMouseState(&platform->mouseX, &platform->mouseY);
 		} else if (e.type == SDL_MOUSEBUTTONDOWN) {
 			// platformMouseLeftDown = true;
 		} else if (e.type == SDL_MOUSEBUTTONUP) {

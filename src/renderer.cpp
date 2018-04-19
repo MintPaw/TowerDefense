@@ -334,13 +334,12 @@ void drawSpriteEx(SpriteDef *def) {
 	uv.identity();
 	glUniformMatrix3fv(renderer->spriteProgram.u_uv, 1, false, (float *)uv.data);
 
-	int tint = 0x00000000;
 	glUniform4f(
 		renderer->spriteProgram.u_tint,
-		((tint >> 16) & 0xff)/255.0,
-		((tint >> 8) & 0xff)/255.0,
-		(tint & 0xff)/255.0,
-		((tint >> 24) & 0xff)/255.0
+		((def->tint >> 16) & 0xff)/255.0,
+		((def->tint >> 8) & 0xff)/255.0,
+		(def->tint & 0xff)/255.0,
+		((def->tint >> 24) & 0xff)/255.0
 	);
 
 	glUniform1f(renderer->spriteProgram.u_alpha, 1);

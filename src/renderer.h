@@ -10,6 +10,7 @@ struct SpriteDef {
 	Texture *tex;
 	Point pos;
 	Point scrollFactor;
+	int tint;
 };
 
 void initRenderer();

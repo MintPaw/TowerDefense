@@ -3,6 +3,10 @@
 #define Min(x, y) ((x) < (y) ? (x) : (y))
 #define Max(x, y) ((x) > (y) ? (x) : (y))
 
+float roundToNearest(float num, float nearest) {
+	return roundf(num / nearest) * nearest;
+}
+
 void Rect::setTo(float x, float y, float width, float height) {
 	this->x = x;
 	this->y = y;

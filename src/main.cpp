@@ -7,7 +7,7 @@ void update();
 bool getKeyPressed(int key);
 
 enum TurretType { TURRET_BASIC };
-enum InvType { INV_HANDS, INV_TURRET_BASIC, INV_FINAL };
+enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
 
 struct Turret {
 	bool exists;
@@ -44,6 +44,8 @@ struct Game {
 	Turret turrets[TURRETS_MAX];
 
 	InvType currentInv;
+	Texture *selecterTexture;
+	Point selecterSize;
 
 	Player player;
 
@@ -71,7 +73,9 @@ int main(int argc, char **argv) {
 
 void update() {
 	/// Section: Init Game
+	bool firstFrame = false;
 	if (!game) {
+		firstFrame = true;
 		game = (Game *)malloc(sizeof(Game));
 		memset(game, 0, sizeof(Game));
 
@@ -79,6 +83,7 @@ void update() {
 		game->player.y = 100;
 
 		game->playerTexture = uploadPngTexturePath("assets/sprites/player.png");
+		game->currentInv = INV_HANDS;
 
 		{ /// Setup map
 			game->tilesetTexture = uploadPngTexturePath("assets/tilesets/tileset.png");
@@ -182,12 +187,22 @@ void update() {
 	if (platform->keys['E'] == KEY_JUST_PRESSED) invRight = true;
 
 	{ /// Inventory
-		if (invLeft) game->currentInv = (InvType)(game->currentInv + 1);
-		if (invRight) game->currentInv = (InvType)(game->currentInv - 1);
+		InvType newInv = game->currentInv;
+		if (invLeft) newInv = (InvType)(game->currentInv + 1);
+		if (invRight) newInv = (InvType)(game->currentInv - 1);
 
-		if (game->currentInv <= (InvType)-1) game->currentInv = (InvType)(INV_FINAL-1);
-		if (game->currentInv >= INV_FINAL) game->currentInv = INV_HANDS;
-		printf("inv: %d\n", game->currentInv);
+		if (newInv <= INV_START) newInv = (InvType)(INV_END-1);
+		if (newInv >= INV_END) newInv = (InvType)(INV_START+1);
+
+		if (game->currentInv != newInv || firstFrame) {
+			game->currentInv = newInv;
+			if (game->selecterTexture != NULL) destroyTexture(game->selecterTexture);
+			if (game->currentInv == INV_HANDS) game->selecterSize.setTo(1, 1);
+			if (game->currentInv == INV_TURRET_BASIC) game->selecterSize.setTo(3, 3);
+
+			if (game->selecterSize.x == 1 && game->selecterSize.y == 1) game->selecterTexture = uploadPngTexturePath("assets/sprites/1x1selecter.png");
+			if (game->selecterSize.x == 3 && game->selecterSize.y == 3) game->selecterTexture = uploadPngTexturePath("assets/sprites/3x3selecter.png");
+		}
 	}
 
 	{ /// Movement
@@ -202,10 +217,20 @@ void update() {
 		player->y += playerMovePoint.y;
 	}
 
+	{ /// Camera
+		setCameraExtents(0, 0, game->mapTexture->width, game->mapTexture->height);
+		setCameraPosition(player->x - platform->windowWidth/2 + game->playerTexture->width/2, player->y - platform->windowHeight/2 + game->playerTexture->height/2);
+	}
+
+	Point selecterPos;
+	bool selecterValid = true;
+	{ /// Selecter
+		selecterPos.x = roundToNearest(platform->mouseX + renderer->camPos.x - game->selecterTexture->width/2, game->tiledMap->tilewidth);
+		selecterPos.y = roundToNearest(platform->mouseY + renderer->camPos.y - game->selecterTexture->height/2, game->tiledMap->tileheight);
+	}
+
 	/// Section: Render
 	clearRenderer();
-	setCameraExtents(0, 0, game->mapTexture->width, game->mapTexture->height);
-	setCameraPosition(player->x - platform->windowWidth/2 + game->playerTexture->width/2, player->y - platform->windowHeight/2 + game->playerTexture->height/2);
 
 	{ /// Draw map
 		SpriteDef def;
@@ -220,6 +245,17 @@ void update() {
 		def.tex = game->playerTexture;
 		def.pos.x = player->x;
 		def.pos.y = player->y;
+		drawSpriteEx(&def);
+	}
+
+	{ /// Draw Selecter
+		SpriteDef def;
+		defaultSpriteDef(&def);
+		def.tex = game->selecterTexture;
+		def.pos.x = selecterPos.x;
+		def.pos.y = selecterPos.y;
+		if (selecterValid) def.tint = 0x2200FF00;
+		else def.tint = 0x22FF0000;
 		drawSpriteEx(&def);
 	}
 

@@ -1,5 +1,7 @@
 #pragma once
 
+float roundToNearest(float num, float nearest=1);
+
 struct Rect {
 	float x;
 	float y;
