@@ -383,8 +383,6 @@ void drawTiles(Texture *srcTexture, Texture *destTexture, int tileWidth, int til
 	Matrix projection;
 	projection.identity();
 	projection.project(renderer->currentViewport.width, renderer->currentViewport.height);
-	// matrixScale(&projectMat, engineWidth/engineCamera.width,  engineHeight/engineCamera.height);
-	// if (sprite->scrolls) matrixTranslate(&projectMat, -engineCamera.x, -engineCamera.y);
 	glUniformMatrix3fv(renderer->tilemapProgram.u_matrix, 1, false, (float *)(&projection.data));
 	CheckGlError();
 
@@ -402,13 +400,13 @@ void drawTiles(Texture *srcTexture, Texture *destTexture, int tileWidth, int til
 	glDrawArrays(GL_TRIANGLES, 0, 2*3);
 	destroyTexture(tempTex);
 	setFramebuffer(0);
+	setViewport(0, 0, platform->windowWidth, platform->windowWidth);
 	CheckGlError();
-
 }
 
 void clearRenderer() {
-	// setFramebuffer(0);
-	// setViewport(0, 0, engine->width, engine->height);
+	setFramebuffer(0);
+	setViewport(0, 0, platform->windowWidth, platform->windowWidth);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
