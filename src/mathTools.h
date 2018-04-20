@@ -6,6 +6,8 @@ struct Rect;
 struct Matrix;
 struct Point;
 
+bool pointInRect(float px, float py, float rx, float ry, float rw, float rh);
+
 struct Rect {
 	float x;
 	float y;

@@ -10,6 +10,10 @@ float roundToNearest(float num, float nearest) {
 	return roundf(num / nearest) * nearest;
 }
 
+bool pointInRect(float px, float py, float rx, float ry, float rw, float rh) {
+	return px >= rx && px <= rx+(rw-1) && py >= ry && py <= ry+(rh-1);
+}
+
 void Rect::setTo(float x, float y, float width, float height) {
 	this->x = x;
 	this->y = y;
@@ -49,14 +53,8 @@ bool Rect::intersects(Rect *other) {
 	return intercects || contains;
 }
 
-bool Rect::containsPoint(Point *point) { return this->containsPoint(point->x, point->y); }
-bool Rect::containsPoint(float px, float py) {
-	float rx = this->x;
-	float ry = this->y;
-	float rw = this->width;
-	float rh = this->height;
-	return px >= rx && px <= rx+(rw-1) && py >= ry && py <= ry+(rh-1);
-}
+bool Rect::containsPoint(Point *point) { return pointInRect(point->x, point->y, this->x, this->y, this->width, this->height); }
+bool Rect::containsPoint(float px, float py) { return pointInRect(px, py, this->x, this->y, this->width, this->height); }
 
 void Matrix::identity() {
 	this->setTo(

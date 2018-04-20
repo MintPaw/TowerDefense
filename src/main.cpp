@@ -190,6 +190,8 @@ void update() {
 
 	/// Section: Update
 	Player *player = &game->player;
+	Point playerCenter;
+	playerCenter.setTo(player->x + game->playerTex->width/2 + player->y + game->playerTex->height * 0.90);
 	bool moveUp = false;
 	bool moveDown = false;
 	bool moveLeft = false;
@@ -278,7 +280,7 @@ void update() {
 
 		Rect playerRect;
 		playerRect.setTo(player->x, player->y, game->playerTex->width, game->playerTex->height);
-		if (selecterRect.intersects(&playerRect)) selecterOverPlayer = false;
+		if (selecterRect.intersects(&playerRect)) selecterOverPlayer = true;
 
 		if (game->currentInv == INV_HANDS) {
 			if (selecterOverTurret) selecterValid = true;
@@ -289,19 +291,8 @@ void update() {
 		}
 
 		if (platform->mouseJustDown) {
-			if (selecterValid) {
-				if (game->currentInv == INV_TURRET_BASIC) buildTurret(selecterPos.x, selecterPos.y, INV_TURRET_BASIC);
-				if (game->currentInv == INV_HANDS) {
-					game->selectedTurret = selecterOverTurret;
-					{ /// Show menu
-					}
-				}
-			} else {
-				if (game->selectedTurret) {
-					game->selectedTurret = NULL;
-					{ /// Hide menu
-					}
-				}
+			if (game->currentInv == INV_TURRET_BASIC) {
+				if (selecterValid) buildTurret(selecterPos.x, selecterPos.y, INV_TURRET_BASIC);
 			}
 		}
 
@@ -326,6 +317,17 @@ void update() {
 			disassembleOption.pos.x = game->selectedTurret->x + game->selectedTurret->baseTex->width + 10;
 			disassembleOption.pos.y = game->selectedTurret->y + (game->disassembleOptionTexture->height + 10) * 3;
 		}
+
+		if (platform->mouseJustDown) {
+			if (game->currentInv == INV_HANDS) {
+				if (selecterValid) {
+					game->selectedTurret = selecterOverTurret;
+				} else {
+					game->selectedTurret = NULL;
+				}
+			}
+		}
+
 	}
 
 	/// Section: Render
