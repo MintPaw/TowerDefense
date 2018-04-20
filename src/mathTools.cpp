@@ -1,3 +1,5 @@
+#include <math.h>
+
 #include "mathTools.h"
 
 #define Min(x, y) ((x) < (y) ? (x) : (y))

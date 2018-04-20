@@ -8,9 +8,12 @@ all:
 
 ifneq (, $(findstring MSYS_NT, $(shell uname))) # ------------------------------------------------- Windows
 
+bLibs:
+	cmd /c "cl -c -MTd -Zi -EHsc -nologo -Iinclude/win32 -Iinclude/json src/libs.cpp -Fdbin/libs.pdb -Fobin/libs.obj"
+
 b:
 	$(MAKE) buildAssets
-	cmd /c "cl -MTd -Zi -EHsc -nologo -Iinclude/win32 -Iinclude/json lib/win32/*.lib src/one.cpp -Fdbin/one.pdb -Fobin/one.obj -link /DEBUG -out:bin/${GAME_NAME}.exe"
+	cmd /c "cl -MTd -Zi -EHsc -nologo -Iinclude/win32 -Iinclude/json lib/win32/*.lib bin/libs.obj src/one.cpp -Fdbin/one.pdb -Fobin/one.obj -link /DEBUG -out:bin/${GAME_NAME}.exe"
 	cp lib/win32/SDL2-d.dll bin/SDL2.dll
 	cp lib/win32/glew32.dll bin
 	cp lib/win32/OpenAl32-d.dll bin/OpenAl32.dll
@@ -21,18 +24,31 @@ r:
 	@echo .
 	@echo .
 	@echo .
-	@(cd bin; ./${GAME_NAME}.exe)
+	@(cd bin; ./$(GAME_NAME).exe)
 
 debugC:
-	cmd /c "devenv /Run bin\${GAME_NAME}.exe"
+	cmd /c "devenv /Run bin\$(GAME_NAME).exe"
 
 endif
 
 ifeq ($(shell uname), Linux) # ------------------------------------------------------------------- Linux
 
-all:
-	$(MAKE) bLinux
-	$(MAKE) rLinux
+bLibs:
+	g++ src/libs.cpp \
+		-g -Wall -fpermissive -Wno-unused-variable -Wno-sign-compare -Wno-strict-aliasing -Wno-trigraphs \
+		-isystem include/linux -isystem include/json -c -o bin/libs.o -lGL -lGLEW -lopenal -lSDL2
+
+b:
+	$(MAKE) buildAssets
+	g++ bin/libs.o src/one.cpp \
+		-g -Wall -Wno-unused-variable -Wno-sign-compare -Wno-strict-aliasing -Wno-trigraphs \
+		-isystem include/linux -isystem include/json -o bin/$(GAME_NAME) -lGL -lGLEW -lopenal -lSDL2
+
+r:
+	@echo .
+	@echo .
+	@echo .
+	@(cd bin; ./$(GAME_NAME))
 
 endif
 
