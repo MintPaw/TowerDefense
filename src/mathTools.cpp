@@ -49,10 +49,8 @@ bool Rect::intersects(Rect *other) {
 	return intercects || contains;
 }
 
-bool Rect::containsPoint(Point *point) {
-	float px = point->x;
-	float py = point->y;
-
+bool Rect::containsPoint(Point *point) { return this->containsPoint(point->x, point->y); }
+bool Rect::containsPoint(float px, float py) {
 	float rx = this->x;
 	float ry = this->y;
 	float rw = this->width;

@@ -305,6 +305,8 @@ void defaultSpriteDef(SpriteDef *def) {
 }
 
 void drawSpriteEx(SpriteDef *def) {
+	if (def->tex == NULL) return;
+
 	setGlViewport(0, 0, platform->windowWidth, platform->windowHeight);
 	setShaderProgram(renderer->spriteProgram.program);
 	CheckGlError();

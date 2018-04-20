@@ -15,6 +15,7 @@ struct Rect {
 	void setTo(float x=0, float y=0, float width=0, float height=0);
 	bool intersects(Rect *other);
 	bool containsPoint(Point *point);
+	bool containsPoint(float px, float py);
 };
 
 struct Matrix {

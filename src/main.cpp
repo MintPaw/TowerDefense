@@ -1,3 +1,7 @@
+/*
+TODO:
+Don't upload turret textures for every turret
+*/
 #include "platform.h"
 #include "renderer.h"
 
@@ -45,6 +49,13 @@ struct Game {
 	InvType currentInv;
 	Texture *selecterTexture;
 
+	Turret *selectedTurret;
+
+	Texture *upgradeOption1Texture;
+	Texture *upgradeOption2Texture;
+	Texture *upgradeOption3Texture;
+	Texture *disassembleOptionTexture;
+
 	Player player;
 
 	Frame *spriteFrames;
@@ -54,8 +65,9 @@ struct Game {
 void update();
 bool getKeyPressed(int key);
 void buildTurret(int x, int y, InvType type);
-bool isRectOverTurret(Rect *rect);
-bool isPointOverTurret(Point *point);
+Turret *isRectOverTurret(Rect *rect);
+Turret *isPointOverTurret(Point *point);
+Turret *isPointOverTurret(float px, float py);
 
 Game *game;
 
@@ -89,15 +101,18 @@ void update() {
 		game->playerTex = uploadPngTexturePath("assets/sprites/player.png");
 		game->currentInv = INV_HANDS;
 
+		game->upgradeOption1Texture = uploadPngTexturePath("assets/sprites/upgradeOption1.png");
+		game->upgradeOption2Texture = uploadPngTexturePath("assets/sprites/upgradeOption2.png");
+		game->upgradeOption3Texture = uploadPngTexturePath("assets/sprites/upgradeOption3.png");
+		game->disassembleOptionTexture = uploadPngTexturePath("assets/sprites/disassembleOption.png");
+
 		{ /// Setup map
 			game->tilesetTexture = uploadPngTexturePath("assets/tilesets/tileset.png");
 
 			void *mapData;
 			long mapSize = readFile("assets/maps/map.json", &mapData);
 			game->tiledMap = tinytiled_load_map_from_memory(mapData, mapSize, 0);
-
 			game->tileSize = game->tiledMap->tilewidth;
-
 			game->mapTexture = uploadTexture(NULL, game->tiledMap->width * game->tileSize, game->tiledMap->height * game->tileSize);
 
 			tinytiled_layer_t *layer = game->tiledMap->layers;
@@ -246,20 +261,70 @@ void update() {
 
 	Point selecterPos;
 	bool selecterValid = true;
+	SpriteDef upgradeOption1;
+	SpriteDef upgradeOption2;
+	SpriteDef upgradeOption3;
+	SpriteDef disassembleOption;
 	{ /// Selecter
+		Turret *selecterOverTurret = NULL;
+		bool selecterOverPlayer = false;
+
 		selecterPos.x = roundToNearest(platform->mouseX + renderer->camPos.x - game->selecterTexture->width/2, game->tileSize);
 		selecterPos.y = roundToNearest(platform->mouseY + renderer->camPos.y - game->selecterTexture->height/2, game->tileSize);
 
 		Rect selecterRect;
 		selecterRect.setTo(selecterPos.x, selecterPos.y, game->selecterTexture->width, game->selecterTexture->height);
-		if (isRectOverTurret(&selecterRect)) selecterValid = false;
+		selecterOverTurret = isRectOverTurret(&selecterRect);
 
 		Rect playerRect;
 		playerRect.setTo(player->x, player->y, game->playerTex->width, game->playerTex->height);
-		if (selecterRect.intersects(&playerRect)) selecterValid = false;
+		if (selecterRect.intersects(&playerRect)) selecterOverPlayer = false;
 
-		if (selecterValid && platform->mouseJustDown) {
-			if (game->currentInv == INV_TURRET_BASIC) buildTurret(selecterPos.x, selecterPos.y, INV_TURRET_BASIC);
+		if (game->currentInv == INV_HANDS) {
+			if (selecterOverTurret) selecterValid = true;
+			else selecterValid = false;
+		} else {
+			if (selecterOverTurret || selecterOverPlayer) selecterValid = false;
+			else selecterValid = true;
+		}
+
+		if (platform->mouseJustDown) {
+			if (selecterValid) {
+				if (game->currentInv == INV_TURRET_BASIC) buildTurret(selecterPos.x, selecterPos.y, INV_TURRET_BASIC);
+				if (game->currentInv == INV_HANDS) {
+					game->selectedTurret = selecterOverTurret;
+					{ /// Show menu
+					}
+				}
+			} else {
+				if (game->selectedTurret) {
+					game->selectedTurret = NULL;
+					{ /// Hide menu
+					}
+				}
+			}
+		}
+
+		defaultSpriteDef(&upgradeOption1);
+		defaultSpriteDef(&upgradeOption2);
+		defaultSpriteDef(&upgradeOption3);
+		defaultSpriteDef(&disassembleOption);
+		if (game->selectedTurret) {
+			upgradeOption1.tex = game->upgradeOption1Texture;
+			upgradeOption1.pos.x = game->selectedTurret->x + game->selectedTurret->baseTex->width + 10;
+			upgradeOption1.pos.y = game->selectedTurret->y;
+
+			upgradeOption2.tex = game->upgradeOption2Texture;
+			upgradeOption2.pos.x = game->selectedTurret->x + game->selectedTurret->baseTex->width + 10;
+			upgradeOption2.pos.y = game->selectedTurret->y + (game->upgradeOption2Texture->height + 10) * 1;
+
+			upgradeOption3.tex = game->upgradeOption3Texture;
+			upgradeOption3.pos.x = game->selectedTurret->x + game->selectedTurret->baseTex->width + 10;
+			upgradeOption3.pos.y = game->selectedTurret->y + (game->upgradeOption3Texture->height + 10) * 2;
+
+			disassembleOption.tex = game->disassembleOptionTexture;
+			disassembleOption.pos.x = game->selectedTurret->x + game->selectedTurret->baseTex->width + 10;
+			disassembleOption.pos.y = game->selectedTurret->y + (game->disassembleOptionTexture->height + 10) * 3;
 		}
 	}
 
@@ -319,6 +384,13 @@ void update() {
 		drawSpriteEx(&def);
 	}
 
+	{ /// Draw upgrade menu
+		drawSpriteEx(&upgradeOption1);
+		drawSpriteEx(&upgradeOption2);
+		drawSpriteEx(&upgradeOption3);
+		drawSpriteEx(&disassembleOption);
+	}
+
 	swapBuffers();
 }
 
@@ -342,32 +414,32 @@ void buildTurret(int x, int y, InvType type) {
 	}
 }
 
-bool isRectOverTurret(Rect *rect) {
+Turret *isRectOverTurret(Rect *rect) {
 	Rect turretRect;
 	for (int i = 0; i < TURRETS_MAX; i++) {
 		Turret *turret = &game->turrets[i];
 		if (turret->exists) {
 			turretRect.setTo(turret->x, turret->y, turret->baseTex->width, turret->baseTex->height);
 
-			if (turretRect.intersects(rect)) return true;
+			if (turretRect.intersects(rect)) return turret;
 		}
 	}
 
-	return false;
+	return NULL;
 }
 
-bool isPointOverTurret(Point *point) {
+Turret *isPointOverTurret(Point *point) { return isPointOverTurret(point->x, point->y); }
+Turret *isPointOverTurret(float px, float py) {
 	Rect turretRect;
 	for (int i = 0; i < TURRETS_MAX; i++) {
 		Turret *turret = &game->turrets[i];
 		if (turret->exists) {
 			turretRect.setTo(turret->x, turret->y, turret->baseTex->width, turret->baseTex->height);
-
-			if (turretRect.containsPoint(point)) return true;
+			if (turretRect.containsPoint(px, py)) return turret;
 		}
 	}
 
-	return false;
+	return NULL;
 }
 
 bool getKeyPressed(int key) {
