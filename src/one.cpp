@@ -14,5 +14,6 @@
 
 #include "platform.cpp"
 #include "renderer.cpp"
+#include "font.cpp"
 
 #include "main.cpp"

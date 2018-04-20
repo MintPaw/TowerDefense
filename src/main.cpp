@@ -36,7 +36,12 @@ struct Player {
 };
 
 struct Game {
+	Player player;
+
+	Frame *spriteFrames;
+	int spriteFramesNum;
 	int tileSize;
+
 	Texture *playerTex;
 
 	tinytiled_map_t *tiledMap; 
@@ -57,10 +62,7 @@ struct Game {
 	Texture *upgradeOption3Texture;
 	Texture *disassembleOptionTexture;
 
-	Player player;
-
-	Frame *spriteFrames;
-	int spriteFramesNum;
+	BitmapFont *mainFont;
 };
 
 void update();
@@ -109,6 +111,8 @@ void update() {
 
 		game->basicTurretBaseTex = uploadPngTexturePath("assets/sprites/basicTurretBase.png");
 		game->basicTurretGunTex = uploadPngTexturePath("assets/sprites/basicTurretGun.png");
+
+		game->mainFont = loadBitmapFontPath("assets/fonts/OpenSans-Regular_22.fnt");
 
 		{ /// Setup map
 			game->tilesetTexture = uploadPngTexturePath("assets/tilesets/tileset.png");

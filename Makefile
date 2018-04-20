@@ -50,6 +50,9 @@ r:
 	@echo .
 	@(cd bin; ./$(GAME_NAME))
 
+debugC:
+	(cd bin; gdb $(GAME_NAME))
+
 endif
 
 buildAssets:
@@ -59,4 +62,5 @@ buildAssets:
 	cp -r raw/sprites bin/assets
 	cp -r raw/maps bin/assets
 	cp -r raw/shaders bin/assets
+	cp -r raw/fonts bin/assets
 	# -cmd /c "D:\_tools\SpriteSheetPacker\SpriteSheetPacker.exe --powerOf2 --format json raw/sprites assets"
