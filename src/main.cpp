@@ -292,12 +292,6 @@ void update() {
 			else selecterValid = true;
 		}
 
-		if (platform->mouseJustDown) {
-			if (game->currentInv == INV_TURRET_BASIC) {
-				if (selecterValid) buildTurret(selecterPos.x, selecterPos.y, INV_TURRET_BASIC);
-			}
-		}
-
 		defaultSpriteDef(&upgradeOption1);
 		defaultSpriteDef(&upgradeOption2);
 		defaultSpriteDef(&upgradeOption3);
@@ -321,11 +315,30 @@ void update() {
 		}
 
 		if (platform->mouseJustDown) {
-			if (game->currentInv == INV_HANDS) {
-				if (selecterValid) {
-					game->selectedTurret = selecterOverTurret;
+			if (game->selectedTurret) {
+				Point worldMouse;
+				worldMouse.setTo(platform->mouseX + renderer->camPos.x, platform->mouseY + renderer->camPos.y);
+				Rect up1 = {upgradeOption1.pos.x, upgradeOption1.pos.y, (float)upgradeOption1.tex->width, (float)upgradeOption1.tex->height};
+				Rect up2 = {upgradeOption2.pos.x, upgradeOption2.pos.y, (float)upgradeOption2.tex->width, (float)upgradeOption2.tex->height};
+				Rect up3 = {upgradeOption3.pos.x, upgradeOption3.pos.y, (float)upgradeOption3.tex->width, (float)upgradeOption3.tex->height};
+				Rect disass = {disassembleOption.pos.x, disassembleOption.pos.y, (float)disassembleOption.tex->width, (float)disassembleOption.tex->height};
+
+				if (up1.containsPoint(worldMouse.x, worldMouse.y)) {
+				} else if (up2.containsPoint(worldMouse.x, worldMouse.y)) {
+				} else if (up3.containsPoint(worldMouse.x, worldMouse.y)) {
+				} else if (disass.containsPoint(worldMouse.x, worldMouse.y)) {
+					game->selectedTurret->exists = false;
+					game->selectedTurret = NULL;
 				} else {
 					game->selectedTurret = NULL;
+				}
+			}
+
+			if (game->currentInv == INV_TURRET_BASIC) {
+				if (selecterValid) buildTurret(selecterPos.x, selecterPos.y, INV_TURRET_BASIC);
+			} else if (game->currentInv == INV_HANDS) {
+				if (selecterValid) {
+					game->selectedTurret = selecterOverTurret;
 				}
 			}
 		}
