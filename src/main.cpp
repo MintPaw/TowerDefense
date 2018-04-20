@@ -3,9 +3,6 @@
 
 #define TURRETS_MAX 1024
 
-void update();
-bool getKeyPressed(int key);
-
 enum TurretType { TURRET_BASIC };
 enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
 
@@ -14,8 +11,9 @@ struct Turret {
 	TurretType type;
 	Texture *baseTex;
 	Texture *gunTex;
-	float x;
-	float y;
+	float gunRotation;
+	int xTile;
+	int yTile;
 };
 
 struct Frame {
@@ -35,6 +33,7 @@ struct Player {
 };
 
 struct Game {
+	int tileSize;
 	Texture *playerTexture;
 
 	tinytiled_map_t *tiledMap; 
@@ -52,6 +51,10 @@ struct Game {
 	Frame *spriteFrames;
 	int spriteFramesNum;
 };
+
+void update();
+bool getKeyPressed(int key);
+void buildTurret(int xTile, int yTile, InvType type);
 
 Game *game;
 
@@ -92,10 +95,9 @@ void update() {
 			long mapSize = readFile("assets/maps/map.json", &mapData);
 			game->tiledMap = tinytiled_load_map_from_memory(mapData, mapSize, 0);
 
-			int w = game->tiledMap->width;
-			int h = game->tiledMap->height;
+			game->tileSize = game->tiledMap->tilewidth;
 
-			game->mapTexture = uploadTexture(NULL, game->tiledMap->width * game->tiledMap->tilewidth, game->tiledMap->height * game->tiledMap->tileheight);
+			game->mapTexture = uploadTexture(NULL, game->tiledMap->width * game->tileSize, game->tiledMap->height * game->tileSize);
 
 			tinytiled_layer_t *layer = game->tiledMap->layers;
 			while (layer) {
@@ -105,7 +107,7 @@ void update() {
 				for (int i = 0; i < dataNum; i++) {
 					// printf("Data: %d\n", data[i]);
 				}
-				drawTiles(game->tilesetTexture, game->mapTexture, game->tiledMap->tilewidth, game->tiledMap->tileheight, game->tiledMap->width, game->tiledMap->height, data);
+				drawTiles(game->tilesetTexture, game->mapTexture, game->tileSize, game->tileSize, game->tiledMap->width, game->tiledMap->height, data);
 				layer = layer->next;
 			}
 		}
@@ -225,22 +227,25 @@ void update() {
 	Point selecterPos;
 	bool selecterValid = true;
 	{ /// Selecter
-		selecterPos.x = roundToNearest(platform->mouseX + renderer->camPos.x - game->selecterTexture->width/2, game->tiledMap->tilewidth);
-		selecterPos.y = roundToNearest(platform->mouseY + renderer->camPos.y - game->selecterTexture->height/2, game->tiledMap->tileheight);
+		selecterPos.x = roundToNearest(platform->mouseX + renderer->camPos.x - game->selecterTexture->width/2, game->tileSize);
+		selecterPos.y = roundToNearest(platform->mouseY + renderer->camPos.y - game->selecterTexture->height/2, game->tileSize);
+
+		if (selecterValid && platform->mouseJustDown) {
+			if (game->currentInv == INV_TURRET_BASIC) buildTurret(selecterPos.x/game->tileSize, selecterPos.y/game->tileSize, INV_TURRET_BASIC);
+		}
 	}
 
 	/// Section: Render
 	clearRenderer();
 
+	SpriteDef def;
 	{ /// Draw map
-		SpriteDef def;
 		defaultSpriteDef(&def);
 		def.tex = game->mapTexture;
 		drawSpriteEx(&def);
 	}
 
 	{ /// Draw player
-		SpriteDef def;
 		defaultSpriteDef(&def);
 		def.tex = game->playerTexture;
 		def.pos.x = player->x;
@@ -248,8 +253,7 @@ void update() {
 		drawSpriteEx(&def);
 	}
 
-	{ /// Draw Selecter
-		SpriteDef def;
+	{ /// Draw selecter
 		defaultSpriteDef(&def);
 		def.tex = game->selecterTexture;
 		def.pos.x = selecterPos.x;
@@ -259,7 +263,46 @@ void update() {
 		drawSpriteEx(&def);
 	}
 
+	{ /// Draw turret
+		for (int i = 0; i < TURRETS_MAX; i++) {
+			Turret *turret = &game->turrets[i];
+			if (turret->exists) {
+				defaultSpriteDef(&def);
+				def.tex = turret->baseTex;
+				def.pos.x = turret->xTile * game->tileSize;
+				def.pos.y = turret->yTile * game->tileSize;
+				drawSpriteEx(&def);
+
+				defaultSpriteDef(&def);
+				def.tex = turret->gunTex;
+				def.pos.x = turret->xTile * game->tileSize;
+				def.pos.y = turret->yTile * game->tileSize;
+				drawSpriteEx(&def);
+			}
+		}
+	}
+
 	swapBuffers();
+}
+
+void buildTurret(int xTile, int yTile, InvType type) {
+	Turret *turret = NULL;
+
+	for (int i = 0; i < TURRETS_MAX; i++) {
+		if (!game->turrets[i].exists) {
+			turret = &game->turrets[i];
+			break;
+		}
+	}
+
+	memset(turret, 0, sizeof(Turret));
+	turret->exists = true;
+	turret->xTile = xTile;
+	turret->yTile = yTile;
+	if (type == INV_TURRET_BASIC) {
+		turret->baseTex = uploadPngTexturePath("assets/sprites/basicTurretBase.png");
+		turret->gunTex = uploadPngTexturePath("assets/sprites/basicTurretGun.png");
+	}
 }
 
 bool getKeyPressed(int key) {

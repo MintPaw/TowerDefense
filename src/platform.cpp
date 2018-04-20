@@ -25,6 +25,8 @@ struct Platform {
 	KeyState keys[KEY_LIMIT];
 	int mouseX;
 	int mouseY;
+	bool mouseDown;
+	bool mouseJustDown;
 };
 
 Platform *platform;
@@ -74,6 +76,8 @@ void swapBuffers() {
 }
 
 void updateEvents() {
+	platform->mouseJustDown = false;
+
 	for (int i = 0; i < KEY_LIMIT; i++) {
 		if (platform->keys[i] == KEY_JUST_PRESSED) platform->keys[i] = KEY_PRESSED;
 		else if (platform->keys[i] == KEY_JUST_RELEASED) platform->keys[i] = KEY_RELEASED;
@@ -103,9 +107,10 @@ void updateEvents() {
 		}	else if (e.type == SDL_MOUSEMOTION) {
 			SDL_GetMouseState(&platform->mouseX, &platform->mouseY);
 		} else if (e.type == SDL_MOUSEBUTTONDOWN) {
-			// platformMouseLeftDown = true;
+			platform->mouseDown = true;
+			platform->mouseJustDown = true;
 		} else if (e.type == SDL_MOUSEBUTTONUP) {
-			// platformMouseLeftDown = false;
+			platform->mouseDown = false;
 		} else if (e.type == SDL_MOUSEWHEEL) {
 			// platformMouseWheel = e.wheel.y;
 		}
