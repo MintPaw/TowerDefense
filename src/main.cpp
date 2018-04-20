@@ -194,8 +194,7 @@ void update() {
 
 	/// Section: Update
 	Player *player = &game->player;
-	Point playerCenter;
-	playerCenter.setTo(player->x + game->playerTex->width/2, player->y + game->playerTex->height * 0.90);
+	Point playerCenter = {player->x + game->playerTex->width/2, player->y + game->playerTex->height * 0.90f};
 	bool moveUp = false;
 	bool moveDown = false;
 	bool moveLeft = false;
@@ -278,8 +277,7 @@ void update() {
 		selecterPos.x = roundToNearest(platform->mouseX + renderer->camPos.x - game->selecterTexture->width/2, game->tileSize);
 		selecterPos.y = roundToNearest(platform->mouseY + renderer->camPos.y - game->selecterTexture->height/2, game->tileSize);
 
-		Rect selecterRect;
-		selecterRect.setTo(selecterPos.x, selecterPos.y, game->selecterTexture->width, game->selecterTexture->height);
+		Rect selecterRect = {selecterPos.x, selecterPos.y, (float)game->selecterTexture->width, (float)game->selecterTexture->height};
 		selecterOverTurret = isRectOverTurret(&selecterRect);
 
 		if (selecterRect.containsPoint(&playerCenter)) selecterOverPlayer = true;
@@ -316,8 +314,7 @@ void update() {
 
 		if (platform->mouseJustDown) {
 			if (game->selectedTurret) {
-				Point worldMouse;
-				worldMouse.setTo(platform->mouseX + renderer->camPos.x, platform->mouseY + renderer->camPos.y);
+				Point worldMouse = {platform->mouseX + renderer->camPos.x, platform->mouseY + renderer->camPos.y};
 				Rect up1 = {upgradeOption1.pos.x, upgradeOption1.pos.y, (float)upgradeOption1.tex->width, (float)upgradeOption1.tex->height};
 				Rect up2 = {upgradeOption2.pos.x, upgradeOption2.pos.y, (float)upgradeOption2.tex->width, (float)upgradeOption2.tex->height};
 				Rect up3 = {upgradeOption3.pos.x, upgradeOption3.pos.y, (float)upgradeOption3.tex->width, (float)upgradeOption3.tex->height};
