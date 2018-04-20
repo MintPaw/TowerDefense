@@ -12,8 +12,8 @@ struct Turret {
 	Texture *baseTex;
 	Texture *gunTex;
 	float gunRotation;
-	int xTile;
-	int yTile;
+	int x;
+	int y;
 };
 
 struct Frame {
@@ -44,7 +44,6 @@ struct Game {
 
 	InvType currentInv;
 	Texture *selecterTexture;
-	Point selecterSize;
 
 	Player player;
 
@@ -54,7 +53,7 @@ struct Game {
 
 void update();
 bool getKeyPressed(int key);
-void buildTurret(int xTile, int yTile, InvType type);
+void buildTurret(int x, int y, InvType type);
 
 Game *game;
 
@@ -198,12 +197,14 @@ void update() {
 
 		if (game->currentInv != newInv || firstFrame) {
 			game->currentInv = newInv;
-			if (game->selecterTexture != NULL) destroyTexture(game->selecterTexture);
-			if (game->currentInv == INV_HANDS) game->selecterSize.setTo(1, 1);
-			if (game->currentInv == INV_TURRET_BASIC) game->selecterSize.setTo(3, 3);
+			Point selecterSize;
 
-			if (game->selecterSize.x == 1 && game->selecterSize.y == 1) game->selecterTexture = uploadPngTexturePath("assets/sprites/1x1selecter.png");
-			if (game->selecterSize.x == 3 && game->selecterSize.y == 3) game->selecterTexture = uploadPngTexturePath("assets/sprites/3x3selecter.png");
+			if (game->selecterTexture != NULL) destroyTexture(game->selecterTexture);
+			if (game->currentInv == INV_HANDS) selecterSize.setTo(1, 1);
+			if (game->currentInv == INV_TURRET_BASIC) selecterSize.setTo(3, 3);
+
+			if (selecterSize.x == 1 && selecterSize.y == 1) game->selecterTexture = uploadPngTexturePath("assets/sprites/1x1selecter.png");
+			if (selecterSize.x == 3 && selecterSize.y == 3) game->selecterTexture = uploadPngTexturePath("assets/sprites/3x3selecter.png");
 		}
 	}
 
@@ -230,8 +231,24 @@ void update() {
 		selecterPos.x = roundToNearest(platform->mouseX + renderer->camPos.x - game->selecterTexture->width/2, game->tileSize);
 		selecterPos.y = roundToNearest(platform->mouseY + renderer->camPos.y - game->selecterTexture->height/2, game->tileSize);
 
+		Rect selecterRect;
+		selecterRect.setTo(selecterPos.x, selecterPos.y, game->selecterTexture->width, game->selecterTexture->height);
+
+		Rect otherRect;
+		for (int i = 0; i < TURRETS_MAX; i++) {
+			Turret *turret = &game->turrets[i];
+			if (turret->exists) {
+				otherRect.setTo(turret->x, turret->y, turret->baseTex->width, turret->baseTex->height);
+
+				if (selecterRect.intersects(&otherRect)) selecterValid = false;
+			}
+		}
+
+		otherRect.setTo(player->x, player->y, game->playerTexture->width, game->playerTexture->height);
+		if (selecterRect.intersects(&otherRect)) selecterValid = false;
+
 		if (selecterValid && platform->mouseJustDown) {
-			if (game->currentInv == INV_TURRET_BASIC) buildTurret(selecterPos.x/game->tileSize, selecterPos.y/game->tileSize, INV_TURRET_BASIC);
+			if (game->currentInv == INV_TURRET_BASIC) buildTurret(selecterPos.x, selecterPos.y, INV_TURRET_BASIC);
 		}
 	}
 
@@ -263,20 +280,27 @@ void update() {
 		drawSpriteEx(&def);
 	}
 
-	{ /// Draw turret
+	{ /// Draw turrets bases
 		for (int i = 0; i < TURRETS_MAX; i++) {
 			Turret *turret = &game->turrets[i];
 			if (turret->exists) {
 				defaultSpriteDef(&def);
 				def.tex = turret->baseTex;
-				def.pos.x = turret->xTile * game->tileSize;
-				def.pos.y = turret->yTile * game->tileSize;
+				def.pos.x = turret->x;
+				def.pos.y = turret->y;
 				drawSpriteEx(&def);
+			}
+		}
+	}
 
+	{ /// Draw turrets guns
+		for (int i = 0; i < TURRETS_MAX; i++) {
+			Turret *turret = &game->turrets[i];
+			if (turret->exists) {
 				defaultSpriteDef(&def);
 				def.tex = turret->gunTex;
-				def.pos.x = turret->xTile * game->tileSize + turret->baseTex->width/2 - turret->gunTex->height/2;
-				def.pos.y = turret->yTile * game->tileSize + turret->baseTex->height/2 - turret->gunTex->height/2;
+				def.pos.x = turret->x + turret->baseTex->width/2 - turret->gunTex->height/2;
+				def.pos.y = turret->y + turret->baseTex->height/2 - turret->gunTex->height/2;
 				def.rotation = turret->gunRotation;
 				def.pivot.setTo(turret->gunTex->height/2, turret->gunTex->height/2);
 				drawSpriteEx(&def);
@@ -287,7 +311,7 @@ void update() {
 	swapBuffers();
 }
 
-void buildTurret(int xTile, int yTile, InvType type) {
+void buildTurret(int x, int y, InvType type) {
 	Turret *turret = NULL;
 
 	for (int i = 0; i < TURRETS_MAX; i++) {
@@ -299,8 +323,8 @@ void buildTurret(int xTile, int yTile, InvType type) {
 
 	memset(turret, 0, sizeof(Turret));
 	turret->exists = true;
-	turret->xTile = xTile;
-	turret->yTile = yTile;
+	turret->x = x;
+	turret->y = y;
 	if (type == INV_TURRET_BASIC) {
 		turret->baseTex = uploadPngTexturePath("assets/sprites/basicTurretBase.png");
 		turret->gunTex = uploadPngTexturePath("assets/sprites/basicTurretGun.png");

@@ -15,6 +15,38 @@ void Rect::setTo(float x, float y, float width, float height) {
 	this->height = height;
 }
 
+bool Rect::intersects(Rect *other) {
+	float r1x = this->x;
+	float r1y = this->y;
+	float r1w = this->width;
+	float r1h = this->height;
+
+	float r2x = other->x;
+	float r2y = other->y;
+	float r2w = other->width;
+	float r2h = other->height;
+
+	return r1x < r2x + r2w &&
+		r1x + r1w > r2x &&
+		r1y < r2y + r2h &&
+		r1h + r1y > r2y;
+
+	bool intercects = !(
+		r2x > r1x+r1w ||
+		r2x+r2w < r1x ||
+		r2y > r1y+r1h ||
+		r2y+r2h < r1y);
+
+	//@cleanup Not sure this contains formula does what I think it does
+	bool contains = 
+		(r1x+r1w) < (r1x+r1w) &&
+		(r2x) > (r1x) &&
+		(r2y) > (r1y) &&
+		(r2y+r2h) < (r1y+r1h);
+
+	return intercects || contains;
+}
+
 void Matrix::identity() {
 	this->setTo(
 		1, 0, 0,
