@@ -47,6 +47,17 @@ bool Rect::intersects(Rect *other) {
 	return intercects || contains;
 }
 
+bool Rect::containsPoint(Point *point) {
+	float px = point->x;
+	float py = point->y;
+
+	float rx = this->x;
+	float ry = this->y;
+	float rw = this->width;
+	float rh = this->height;
+	return px >= rx && px <= rx+(rw-1) && py >= ry && py <= ry+(rh-1);
+}
+
 void Matrix::identity() {
 	this->setTo(
 		1, 0, 0,

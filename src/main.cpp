@@ -34,7 +34,7 @@ struct Player {
 
 struct Game {
 	int tileSize;
-	Texture *playerTexture;
+	Texture *playerTex;
 
 	tinytiled_map_t *tiledMap; 
 	Texture *tilesetTexture;
@@ -54,6 +54,8 @@ struct Game {
 void update();
 bool getKeyPressed(int key);
 void buildTurret(int x, int y, InvType type);
+bool isRectOverTurret(Rect *rect);
+bool isPointOverTurret(Point *point);
 
 Game *game;
 
@@ -84,7 +86,7 @@ void update() {
 		game->player.x = 100;
 		game->player.y = 100;
 
-		game->playerTexture = uploadPngTexturePath("assets/sprites/player.png");
+		game->playerTex = uploadPngTexturePath("assets/sprites/player.png");
 		game->currentInv = INV_HANDS;
 
 		{ /// Setup map
@@ -216,13 +218,30 @@ void update() {
 		if (moveLeft) playerMovePoint.x -= moveSpeed;
 		if (moveRight) playerMovePoint.x += moveSpeed;
 
-		player->x += playerMovePoint.x;
-		player->y += playerMovePoint.y;
+		float newX = player->x + playerMovePoint.x;
+		float newY = player->y + playerMovePoint.y;
+
+		Point collPosX;
+		collPosX.x = newX;
+		collPosX.y = player->y;
+
+		Point collPosY;
+		collPosY.x = player->x;
+		collPosY.y = newY;
+
+		collPosX.x += game->playerTex->width/2;
+		collPosX.y += game->playerTex->height * 0.90;
+
+		collPosY.x += game->playerTex->width/2;
+		collPosY.y += game->playerTex->height * 0.90;
+
+		if (!isPointOverTurret(&collPosX)) player->x = newX;
+		if (!isPointOverTurret(&collPosY)) player->y = newY;
 	}
 
 	{ /// Camera
 		setCameraExtents(0, 0, game->mapTexture->width, game->mapTexture->height);
-		setCameraPosition(player->x - platform->windowWidth/2 + game->playerTexture->width/2, player->y - platform->windowHeight/2 + game->playerTexture->height/2);
+		setCameraPosition(player->x - platform->windowWidth/2 + game->playerTex->width/2, player->y - platform->windowHeight/2 + game->playerTex->height/2);
 	}
 
 	Point selecterPos;
@@ -233,19 +252,11 @@ void update() {
 
 		Rect selecterRect;
 		selecterRect.setTo(selecterPos.x, selecterPos.y, game->selecterTexture->width, game->selecterTexture->height);
+		if (isRectOverTurret(&selecterRect)) selecterValid = false;
 
-		Rect otherRect;
-		for (int i = 0; i < TURRETS_MAX; i++) {
-			Turret *turret = &game->turrets[i];
-			if (turret->exists) {
-				otherRect.setTo(turret->x, turret->y, turret->baseTex->width, turret->baseTex->height);
-
-				if (selecterRect.intersects(&otherRect)) selecterValid = false;
-			}
-		}
-
-		otherRect.setTo(player->x, player->y, game->playerTexture->width, game->playerTexture->height);
-		if (selecterRect.intersects(&otherRect)) selecterValid = false;
+		Rect playerRect;
+		playerRect.setTo(player->x, player->y, game->playerTex->width, game->playerTex->height);
+		if (selecterRect.intersects(&playerRect)) selecterValid = false;
 
 		if (selecterValid && platform->mouseJustDown) {
 			if (game->currentInv == INV_TURRET_BASIC) buildTurret(selecterPos.x, selecterPos.y, INV_TURRET_BASIC);
@@ -259,24 +270,6 @@ void update() {
 	{ /// Draw map
 		defaultSpriteDef(&def);
 		def.tex = game->mapTexture;
-		drawSpriteEx(&def);
-	}
-
-	{ /// Draw player
-		defaultSpriteDef(&def);
-		def.tex = game->playerTexture;
-		def.pos.x = player->x;
-		def.pos.y = player->y;
-		drawSpriteEx(&def);
-	}
-
-	{ /// Draw selecter
-		defaultSpriteDef(&def);
-		def.tex = game->selecterTexture;
-		def.pos.x = selecterPos.x;
-		def.pos.y = selecterPos.y;
-		if (selecterValid) def.tint = 0x2200FF00;
-		else def.tint = 0x22FF0000;
 		drawSpriteEx(&def);
 	}
 
@@ -308,6 +301,24 @@ void update() {
 		}
 	}
 
+	{ /// Draw player
+		defaultSpriteDef(&def);
+		def.tex = game->playerTex;
+		def.pos.x = player->x;
+		def.pos.y = player->y;
+		drawSpriteEx(&def);
+	}
+
+	{ /// Draw selecter
+		defaultSpriteDef(&def);
+		def.tex = game->selecterTexture;
+		def.pos.x = selecterPos.x;
+		def.pos.y = selecterPos.y;
+		if (selecterValid) def.tint = 0x2200FF00;
+		else def.tint = 0x22FF0000;
+		drawSpriteEx(&def);
+	}
+
 	swapBuffers();
 }
 
@@ -329,6 +340,34 @@ void buildTurret(int x, int y, InvType type) {
 		turret->baseTex = uploadPngTexturePath("assets/sprites/basicTurretBase.png");
 		turret->gunTex = uploadPngTexturePath("assets/sprites/basicTurretGun.png");
 	}
+}
+
+bool isRectOverTurret(Rect *rect) {
+	Rect turretRect;
+	for (int i = 0; i < TURRETS_MAX; i++) {
+		Turret *turret = &game->turrets[i];
+		if (turret->exists) {
+			turretRect.setTo(turret->x, turret->y, turret->baseTex->width, turret->baseTex->height);
+
+			if (turretRect.intersects(rect)) return true;
+		}
+	}
+
+	return false;
+}
+
+bool isPointOverTurret(Point *point) {
+	Rect turretRect;
+	for (int i = 0; i < TURRETS_MAX; i++) {
+		Turret *turret = &game->turrets[i];
+		if (turret->exists) {
+			turretRect.setTo(turret->x, turret->y, turret->baseTex->width, turret->baseTex->height);
+
+			if (turretRect.containsPoint(point)) return true;
+		}
+	}
+
+	return false;
 }
 
 bool getKeyPressed(int key) {

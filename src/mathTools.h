@@ -2,6 +2,10 @@
 
 float roundToNearest(float num, float nearest=1);
 
+struct Rect;
+struct Matrix;
+struct Point;
+
 struct Rect {
 	float x;
 	float y;
@@ -10,6 +14,7 @@ struct Rect {
 
 	void setTo(float x=0, float y=0, float width=0, float height=0);
 	bool intersects(Rect *other);
+	bool containsPoint(Point *point);
 };
 
 struct Matrix {
