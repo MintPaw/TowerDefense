@@ -275,8 +275,10 @@ void update() {
 
 				defaultSpriteDef(&def);
 				def.tex = turret->gunTex;
-				def.pos.x = turret->xTile * game->tileSize;
-				def.pos.y = turret->yTile * game->tileSize;
+				def.pos.x = turret->xTile * game->tileSize + turret->baseTex->width/2 - turret->gunTex->height/2;
+				def.pos.y = turret->yTile * game->tileSize + turret->baseTex->height/2 - turret->gunTex->height/2;
+				def.rotation = turret->gunRotation;
+				def.pivot.setTo(turret->gunTex->height/2, turret->gunTex->height/2);
 				drawSpriteEx(&def);
 			}
 		}

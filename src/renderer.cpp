@@ -326,6 +326,11 @@ void drawSpriteEx(SpriteDef *def) {
 	matrix.identity();
 	matrix.project(platform->windowWidth, platform->windowHeight);
 	matrix.translate(def->pos.x - camOff.x, def->pos.y - camOff.y);
+
+	matrix.translate(def->pivot.x, def->pivot.y);
+	matrix.rotate(def->rotation);
+	matrix.translate(-def->pivot.x, -def->pivot.y);
+
 	glUniformMatrix3fv(renderer->spriteProgram.u_matrix, 1, false, (float *)matrix.data);
 
 	setTexture(def->tex->textureId);

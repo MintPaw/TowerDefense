@@ -11,6 +11,8 @@ struct SpriteDef {
 	Point pos;
 	Point scrollFactor;
 	int tint;
+	float rotation;
+	Point pivot;
 };
 
 void initRenderer();

@@ -2,6 +2,7 @@
 
 #define Min(x, y) ((x) < (y) ? (x) : (y))
 #define Max(x, y) ((x) > (y) ? (x) : (y))
+#define PI 3.14159
 
 float roundToNearest(float num, float nearest) {
 	return roundf(num / nearest) * nearest;
@@ -60,6 +61,17 @@ void Matrix::translate(float x, float y) {
 		1, 0, 0,
 		0, 1, 0,
 		x, y, 1
+	};
+	this->multiply(array);
+}
+
+void Matrix::rotate(float deg) {
+	float s = sin(deg*PI/180);
+	float c = cos(deg*PI/180);
+	float array[9] = {
+		c, -s, 0,
+		s,  c, 0,
+		0,  0, 1
 	};
 	this->multiply(array);
 }

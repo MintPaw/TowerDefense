@@ -21,6 +21,7 @@ struct Matrix {
 	void project(float width, float height);
 	void multiply(float *array);
 	void translate(float x, float y);
+	void rotate(float deg);
 };
 
 struct Point {
