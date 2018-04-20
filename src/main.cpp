@@ -1,6 +1,5 @@
 /*
 TODO:
-Don't upload turret textures for every turret
 */
 #include "platform.h"
 #include "renderer.h"
@@ -45,6 +44,8 @@ struct Game {
 	Texture *mapTexture;
 
 	Turret turrets[TURRETS_MAX];
+	Texture *basicTurretBaseTex;
+	Texture *basicTurretGunTex;
 
 	InvType currentInv;
 	Texture *selecterTexture;
@@ -105,6 +106,9 @@ void update() {
 		game->upgradeOption2Texture = uploadPngTexturePath("assets/sprites/upgradeOption2.png");
 		game->upgradeOption3Texture = uploadPngTexturePath("assets/sprites/upgradeOption3.png");
 		game->disassembleOptionTexture = uploadPngTexturePath("assets/sprites/disassembleOption.png");
+
+		game->basicTurretBaseTex = uploadPngTexturePath("assets/sprites/basicTurretBase.png");
+		game->basicTurretGunTex = uploadPngTexturePath("assets/sprites/basicTurretGun.png");
 
 		{ /// Setup map
 			game->tilesetTexture = uploadPngTexturePath("assets/tilesets/tileset.png");
@@ -409,8 +413,9 @@ void buildTurret(int x, int y, InvType type) {
 	turret->x = x;
 	turret->y = y;
 	if (type == INV_TURRET_BASIC) {
-		turret->baseTex = uploadPngTexturePath("assets/sprites/basicTurretBase.png");
-		turret->gunTex = uploadPngTexturePath("assets/sprites/basicTurretGun.png");
+		turret->type = TURRET_BASIC;
+		turret->baseTex = game->basicTurretBaseTex;
+		turret->gunTex = game->basicTurretGunTex;
 	}
 }
 
