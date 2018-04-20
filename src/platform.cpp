@@ -100,6 +100,7 @@ void updateEvents() {
 		} else if (e.type == SDL_KEYUP) {
 			int key = e.key.keysym.sym;
 			if (key >= 'a' && key <= 'z') key -= 'a'-'A';
+			if (key > KEY_LIMIT) return;
 
 			if (platform->keys[key] == KEY_PRESSED || platform->keys[key] == KEY_JUST_PRESSED) {
 				platform->keys[key] = KEY_JUST_RELEASED;
