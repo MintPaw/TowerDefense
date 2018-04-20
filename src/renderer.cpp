@@ -240,7 +240,7 @@ void drawCircle(float x, float y, float radius, int colour) {
 	CheckGlError();
 }
 
-Texture *uploadPngTexturePath(char *path) {
+Texture *uploadPngTexturePath(const char *path) {
 	void *pngData;
 	int pngSize = readFile(path, &pngData);
 	Texture *tex = uploadPngTexture(pngData, pngSize);

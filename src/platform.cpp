@@ -119,7 +119,7 @@ void updateEvents() {
 
 long readFile(const char *filename, void **storage) {
 	FILE *filePtr = fopen(filename, "rb");
-	if (!filePtr) return NULL;
+	if (!filePtr) return 0;
 
 	fseek(filePtr, 0, SEEK_END);
 	long fileSize = ftell(filePtr);
