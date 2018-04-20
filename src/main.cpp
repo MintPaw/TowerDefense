@@ -191,7 +191,7 @@ void update() {
 	/// Section: Update
 	Player *player = &game->player;
 	Point playerCenter;
-	playerCenter.setTo(player->x + game->playerTex->width/2 + player->y + game->playerTex->height * 0.90);
+	playerCenter.setTo(player->x + game->playerTex->width/2, player->y + game->playerTex->height * 0.90);
 	bool moveUp = false;
 	bool moveDown = false;
 	bool moveLeft = false;
@@ -278,9 +278,7 @@ void update() {
 		selecterRect.setTo(selecterPos.x, selecterPos.y, game->selecterTexture->width, game->selecterTexture->height);
 		selecterOverTurret = isRectOverTurret(&selecterRect);
 
-		Rect playerRect;
-		playerRect.setTo(player->x, player->y, game->playerTex->width, game->playerTex->height);
-		if (selecterRect.intersects(&playerRect)) selecterOverPlayer = true;
+		if (selecterRect.containsPoint(&playerCenter)) selecterOverPlayer = true;
 
 		if (game->currentInv == INV_HANDS) {
 			if (selecterOverTurret) selecterValid = true;
