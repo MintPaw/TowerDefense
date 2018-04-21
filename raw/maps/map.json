@@ -42,11 +42,13 @@
                  "name":"spawner",
                  "properties":
                     {
-                     "interval":"5"
+                     "interval":5,
+                     "max":5
                     },
                  "propertytypes":
                     {
-                     "interval":"string"
+                     "interval":"float",
+                     "max":"int"
                     },
                  "rotation":0,
                  "type":"bat",

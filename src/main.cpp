@@ -6,9 +6,19 @@ TODO:
 
 #define TURRETS_MAX 1024
 #define COLLS_MAX 1024
+#define SPAWNERS_MAX 1024
 
 enum TurretType { TURRET_BASIC };
 enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
+enum SpawnerType { SPAWNER_BATS };
+
+struct Spawner {
+	bool exists;
+	Rect rect;
+	SpawnerType type;
+	float interval;
+	int max;
+};
 
 struct Turret {
 	bool exists;
@@ -20,16 +30,16 @@ struct Turret {
 	int y;
 };
 
-struct Frame {
-	char *name;
-	int x;
-	int y;
-	int width;
-	int height;
-	int sourceWidth;
-	int sourceHeight;
-	bool rotated;
-};
+// struct Frame {
+// 	char *name;
+// 	int x;
+// 	int y;
+// 	int width;
+// 	int height;
+// 	int sourceWidth;
+// 	int sourceHeight;
+// 	bool rotated;
+// };
 
 struct Player {
 	float x;
@@ -40,7 +50,7 @@ struct Player {
 struct Game {
 	Player player;
 
-	Frame *spriteFrames;
+	// Frame *spriteFrames;
 	int spriteFramesNum;
 	int tileSize;
 
@@ -67,6 +77,7 @@ struct Game {
 	Texture *frameTimeText;
 
 	Rect colls[COLLS_MAX];
+	Spawner spawners[SPAWNERS_MAX];
 };
 
 void update();
@@ -131,18 +142,39 @@ void update() {
 					drawTiles(game->tilesetTexture, game->mapTexture, game->tileSize, game->tileSize, game->tiledMap->width, game->tiledMap->height, layer->data);
 				}
 
-				if (streq(layer->name.ptr, "coll")) {
-					tinytiled_object_t *object = layer->objects;
-					while (object) {
+				tinytiled_object_t *object = layer->objects;
+				while (object) {
+					if (streq(layer->name.ptr, "coll")) {
 						for (int i = 0; i < COLLS_MAX; i++) {
 							if (game->colls[i].width == 0) {
 								game->colls[i].setTo(object->x, object->y, object->width, object->height);
 								break;
 							}
 						}
-
-						object = object->next;
 					}
+
+					if (streq(layer->name.ptr, "meta")) {
+						if (streq(object->name.ptr, "spawner")) {
+							for (int i = 0; i < SPAWNERS_MAX; i++) {
+								Spawner *spawner = &game->spawners[i];
+								if (!spawner->exists) {
+									spawner->rect.setTo(object->x, object->y, object->width, object->height);
+									for (int j = 0; j < object->property_count; j++) {
+										tinytiled_property_t *prop = &object->properties[j];
+										float value;
+										if (prop->type == TINYTILED_PROPERTY_INT) value = prop->data.integer;
+										if (prop->type == TINYTILED_PROPERTY_FLOAT) value = prop->data.floating;
+
+										if (streq(prop->name.ptr, "interval")) spawner->interval = value;
+										if (streq(prop->name.ptr, "max")) spawner->max = value;
+									}
+									break;
+								}
+							}
+						}
+					}
+
+					object = object->next;
 				}
 
 				// int *data = layer->data;

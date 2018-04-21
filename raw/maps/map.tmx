@@ -113,7 +113,8 @@
  <objectgroup name="meta">
   <object id="3" name="spawner" type="bat" x="1886" y="1184" width="33" height="32">
    <properties>
-    <property name="interval" value="5"/>
+    <property name="interval" type="float" value="5"/>
+    <property name="max" type="int" value="10"/>
    </properties>
   </object>
  </objectgroup>
