@@ -104,9 +104,16 @@ BitmapFont *loadBitmapFontPath(const char *fntPath) {
 	return font;
 }
 
-void drawText(Texture *tex, BitmapFont *font, const char *text, int wordWrapWidth=0);
-void drawText(Texture *tex, BitmapFont *font, const char *text, int wordWrapWidth) {
-	if (wordWrapWidth == 0) wordWrapWidth = tex->width;
+void drawText(Texture *tex, BitmapFont *font, const char *text, ...);
+void drawText(Texture *tex, BitmapFont *font, const char *text, ...) {
+	char *realText = (char *)malloc(TEXT_MAX);
+
+	va_list argptr;
+	va_start(argptr, text);
+	vsprintf(realText, text, argptr);
+	va_end(argptr);
+
+	text = (char *)realText;
 
 	Rect charRects[TEXT_MAX];
 	int lineBreaks[TEXT_MAX];
@@ -150,7 +157,7 @@ void drawText(Texture *tex, BitmapFont *font, const char *text, int wordWrapWidt
 				prevWordChar = curWordChar;
 			}
 
-			if (cursor.x + wordWidth > wordWrapWidth) {
+			if (cursor.x + wordWidth > tex->width) {
 				cursor.x = 0;
 				cursor.y += font->lineHeight;
 				textHeight += font->lineHeight;
@@ -192,6 +199,8 @@ void drawText(Texture *tex, BitmapFont *font, const char *text, int wordWrapWidt
 	}
 
 	textHeight += font->lineHeight;
+
+	free(realText);
 }
 
 BitmapCharDef *getCharDef(BitmapFont *font, int ch) {

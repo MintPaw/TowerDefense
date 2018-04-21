@@ -456,7 +456,7 @@ void drawTiles(Texture *srcTexture, Texture *destTexture, int tileWidth, int til
 	glDrawArrays(GL_TRIANGLES, 0, 2*3);
 	destroyTexture(tempTex);
 	setFramebuffer(0);
-	setViewport(0, 0, platform->windowWidth, platform->windowWidth);
+	setViewport(0, 0, platform->windowWidth, platform->windowHeight);
 	CheckGlError();
 
 	glDisableVertexAttribArray(renderer->tilemapProgram.a_position);
@@ -512,6 +512,8 @@ void drawTextureToTexture(Texture *srcTex, Texture *destTex, int x, int y, int w
 	glUniform1i(renderer->renderTextureProgram.u_texture, 0);
 
 	glDrawArrays(GL_TRIANGLES, 0, 2*3);
+	setFramebuffer(0);
+	setViewport(0, 0, platform->windowWidth, platform->windowHeight);
 	CheckGlError();
 
 	glDisableVertexAttribArray(renderer->renderTextureProgram.a_texCoord);
@@ -521,7 +523,7 @@ void drawTextureToTexture(Texture *srcTex, Texture *destTex, int x, int y, int w
 
 void clearRenderer() {
 	setFramebuffer(0);
-	setViewport(0, 0, platform->windowWidth, platform->windowWidth);
+	setViewport(0, 0, platform->windowWidth, platform->windowHeight);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 

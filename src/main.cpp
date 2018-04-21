@@ -63,7 +63,8 @@ struct Game {
 	Texture *disassembleOptionTexture;
 
 	BitmapFont *mainFont;
-	Texture *testTextTexture;
+
+	Texture *frameTimeText;
 };
 
 void update();
@@ -114,8 +115,7 @@ void update() {
 		game->basicTurretGunTex = uploadPngTexturePath("assets/sprites/basicTurretGun.png");
 
 		game->mainFont = loadBitmapFontPath("assets/fonts/OpenSans-Regular_22.fnt");
-		game->testTextTexture = uploadTexture(NULL, 256, 256);
-		drawText(game->testTextTexture, game->mainFont, "Hello, World!");
+		game->frameTimeText = uploadTexture(NULL, 512, 256);
 
 		{ /// Setup map
 			game->tilesetTexture = uploadPngTexturePath("assets/tilesets/tileset.png");
@@ -349,6 +349,10 @@ void update() {
 
 	}
 
+	{ /// Hud
+		drawText(game->frameTimeText, game->mainFont, "Frame time: %d", 20);
+	}
+
 	/// Section: Render
 	clearRenderer();
 
@@ -412,7 +416,12 @@ void update() {
 		drawSpriteEx(&disassembleOption);
 	}
 
-	drawSprite(game->testTextTexture, 100, 100);
+	{ /// Draw hud
+		defaultSpriteDef(&def);
+		def.tex = game->frameTimeText;
+		def.scrollFactor.setTo(0, 0);
+		drawSpriteEx(&def);
+	}
 
 	swapBuffers();
 }
