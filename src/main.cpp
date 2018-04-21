@@ -100,9 +100,6 @@ void update() {
 		game = (Game *)malloc(sizeof(Game));
 		memset(game, 0, sizeof(Game));
 
-		game->player.x = 100;
-		game->player.y = 100;
-
 		game->playerTex = uploadPngTexturePath("assets/sprites/player.png");
 		game->currentInv = INV_HANDS;
 
@@ -137,6 +134,9 @@ void update() {
 				drawTiles(game->tilesetTexture, game->mapTexture, game->tileSize, game->tileSize, game->tiledMap->width, game->tiledMap->height, data);
 				layer = layer->next;
 			}
+
+			game->player.x = game->mapTexture->width/2 + game->tileSize/2 - game->playerTex->width/2;
+			game->player.y = game->mapTexture->height/2 + game->tileSize/2 - game->playerTex->height/2;
 		}
 
 		{ /// Parse frames
@@ -238,7 +238,7 @@ void update() {
 	}
 
 	{ /// Movement
-		float moveSpeed = 5;
+		float moveSpeed = 3;
 		Point playerMovePoint = {};
 		if (moveUp) playerMovePoint.y -= moveSpeed;
 		if (moveDown) playerMovePoint.y += moveSpeed;
