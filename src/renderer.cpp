@@ -521,6 +521,17 @@ void drawTextureToTexture(Texture *srcTex, Texture *destTex, int x, int y, int w
 	CheckGlError();
 }
 
+void clearTexture(Texture *tex) {
+	setFramebuffer(renderer->textureFramebuffer);
+	setFramebufferTexture(tex->textureId);
+
+	setViewport(0, 0, tex->width, tex->height);
+
+	glClearColor(0.0, 0.0, 0.0, 0.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClearColor(0.0, 0.0, 0.0, 1.0);
+}
+
 void clearRenderer() {
 	setFramebuffer(0);
 	setViewport(0, 0, platform->windowWidth, platform->windowHeight);

@@ -115,6 +115,8 @@ void drawText(Texture *tex, BitmapFont *font, const char *text, ...) {
 
 	text = (char *)realText;
 
+	clearTexture(tex);
+
 	Rect charRects[TEXT_MAX];
 	int lineBreaks[TEXT_MAX];
 	int charRectsNum = 0;

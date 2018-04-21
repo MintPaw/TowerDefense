@@ -27,6 +27,8 @@ struct Platform {
 	int mouseY;
 	bool mouseDown;
 	bool mouseJustDown;
+
+	int frameTime;
 };
 
 Platform *platform;
@@ -66,8 +68,10 @@ void initPlatform() {
 void platformUpdateLoop(void (*updateCallbcak)()) {
 	platform->running = true;
 	while (platform->running) {
+		int startTime = SDL_GetTicks();
 		updateEvents();
 		updateCallbcak();
+		platform->frameTime = SDL_GetTicks() - startTime;
 	}
 }
 

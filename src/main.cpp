@@ -350,7 +350,7 @@ void update() {
 	}
 
 	{ /// Hud
-		drawText(game->frameTimeText, game->mainFont, "Frame time: %d", 20);
+		drawText(game->frameTimeText, game->mainFont, "Frame time: %d", platform->frameTime);
 	}
 
 	/// Section: Render
