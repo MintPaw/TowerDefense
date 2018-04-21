@@ -18,6 +18,7 @@ struct Rect {
 	bool intersects(Rect *other);
 	bool containsPoint(Point *point);
 	bool containsPoint(float px, float py);
+	void print();
 };
 
 struct Matrix {

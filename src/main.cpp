@@ -5,6 +5,7 @@ TODO:
 #include "renderer.h"
 
 #define TURRETS_MAX 1024
+#define COLLS_MAX 1024
 
 enum TurretType { TURRET_BASIC };
 enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
@@ -33,6 +34,7 @@ struct Frame {
 struct Player {
 	float x;
 	float y;
+	Texture *tex;
 };
 
 struct Game {
@@ -41,8 +43,6 @@ struct Game {
 	Frame *spriteFrames;
 	int spriteFramesNum;
 	int tileSize;
-
-	Texture *playerTex;
 
 	tinytiled_map_t *tiledMap; 
 	Texture *tilesetTexture;
@@ -65,14 +65,16 @@ struct Game {
 	BitmapFont *mainFont;
 
 	Texture *frameTimeText;
+
+	Rect colls[COLLS_MAX];
 };
 
 void update();
 bool getKeyPressed(int key);
 void buildTurret(int x, int y, InvType type);
 Turret *isRectOverTurret(Rect *rect);
-Turret *isPointOverTurret(Point *point);
 Turret *isPointOverTurret(float px, float py);
+bool isPointOverColl(float px, float py);
 
 Game *game;
 
@@ -100,7 +102,7 @@ void update() {
 		game = (Game *)malloc(sizeof(Game));
 		memset(game, 0, sizeof(Game));
 
-		game->playerTex = uploadPngTexturePath("assets/sprites/player.png");
+		game->player.tex = uploadPngTexturePath("assets/sprites/player.png");
 		game->currentInv = INV_HANDS;
 
 		game->upgradeOption1Texture = uploadPngTexturePath("assets/sprites/upgradeOption1.png");
@@ -125,18 +127,35 @@ void update() {
 
 			tinytiled_layer_t *layer = game->tiledMap->layers;
 			while (layer) {
-				int *data = layer->data;
-				int dataNum = layer->data_count;
-
-				for (int i = 0; i < dataNum; i++) {
-					// printf("Data: %d\n", data[i]);
+				if (streq(layer->name.ptr, "visual")) {
+					drawTiles(game->tilesetTexture, game->mapTexture, game->tileSize, game->tileSize, game->tiledMap->width, game->tiledMap->height, layer->data);
 				}
-				drawTiles(game->tilesetTexture, game->mapTexture, game->tileSize, game->tileSize, game->tiledMap->width, game->tiledMap->height, data);
+
+				if (streq(layer->name.ptr, "coll")) {
+					tinytiled_object_t *object = layer->objects;
+					while (object) {
+						for (int i = 0; i < COLLS_MAX; i++) {
+							if (game->colls[i].width == 0) {
+								game->colls[i].setTo(object->x, object->y, object->width, object->height);
+								break;
+							}
+						}
+
+						object = object->next;
+					}
+				}
+
+				// int *data = layer->data;
+				// int dataNum = layer->data_count;
+
+				// for (int i = 0; i < dataNum; i++) {
+				// 	printf("Data: %d\n", data[i]);
+				// }
 				layer = layer->next;
 			}
 
-			game->player.x = game->mapTexture->width/2 + game->tileSize/2 - game->playerTex->width/2;
-			game->player.y = game->mapTexture->height/2 + game->tileSize/2 - game->playerTex->height/2;
+			game->player.x = game->mapTexture->width/2 + game->tileSize/2 - game->player.tex->width/2;
+			game->player.y = game->mapTexture->height/2 + game->tileSize/2 - game->player.tex->height/2;
 		}
 
 		{ /// Parse frames
@@ -201,7 +220,7 @@ void update() {
 
 	/// Section: Update
 	Player *player = &game->player;
-	Point playerCenter = {player->x + game->playerTex->width/2, player->y + game->playerTex->height * 0.90f};
+	Point playerCenter = {player->x + game->player.tex->width/2, player->y + game->player.tex->height * 0.90f};
 	bool moveUp = false;
 	bool moveDown = false;
 	bool moveLeft = false;
@@ -245,30 +264,24 @@ void update() {
 		if (moveLeft) playerMovePoint.x -= moveSpeed;
 		if (moveRight) playerMovePoint.x += moveSpeed;
 
-		float newX = player->x + playerMovePoint.x;
-		float newY = player->y + playerMovePoint.y;
+		float collX = playerCenter.x + playerMovePoint.x;
+		float collY = playerCenter.y + playerMovePoint.y;
 
-		Point collPosX;
-		collPosX.x = newX;
-		collPosX.y = player->y;
+		bool canMoveX = true;
+		bool canMoveY = true;
 
-		Point collPosY;
-		collPosY.x = player->x;
-		collPosY.y = newY;
+		if (isPointOverTurret(collX, playerCenter.y)) canMoveX = false;
+		if (isPointOverTurret(playerCenter.x, collY)) canMoveY = false;
+		if (isPointOverColl(collX, playerCenter.y)) canMoveX = false;
+		if (isPointOverColl(playerCenter.x, collY)) canMoveY = false;
 
-		collPosX.x += game->playerTex->width/2;
-		collPosX.y += game->playerTex->height * 0.90;
-
-		collPosY.x += game->playerTex->width/2;
-		collPosY.y += game->playerTex->height * 0.90;
-
-		if (!isPointOverTurret(&collPosX)) player->x = newX;
-		if (!isPointOverTurret(&collPosY)) player->y = newY;
+		if (canMoveX) player->x += playerMovePoint.x;
+		if (canMoveY) player->y += playerMovePoint.y;
 	}
 
 	{ /// Camera
 		setCameraExtents(0, 0, game->mapTexture->width, game->mapTexture->height);
-		setCameraPosition(player->x - platform->windowWidth/2 + game->playerTex->width/2, player->y - platform->windowHeight/2 + game->playerTex->height/2);
+		setCameraPosition(player->x - platform->windowWidth/2 + game->player.tex->width/2, player->y - platform->windowHeight/2 + game->player.tex->height/2);
 	}
 
 	Point selecterPos;
@@ -393,7 +406,7 @@ void update() {
 
 	{ /// Draw player
 		defaultSpriteDef(&def);
-		def.tex = game->playerTex;
+		def.tex = game->player.tex;
 		def.pos.x = player->x;
 		def.pos.y = player->y;
 		drawSpriteEx(&def);
@@ -461,7 +474,6 @@ Turret *isRectOverTurret(Rect *rect) {
 	return NULL;
 }
 
-Turret *isPointOverTurret(Point *point) { return isPointOverTurret(point->x, point->y); }
 Turret *isPointOverTurret(float px, float py) {
 	Rect turretRect;
 	for (int i = 0; i < TURRETS_MAX; i++) {
@@ -473,6 +485,17 @@ Turret *isPointOverTurret(float px, float py) {
 	}
 
 	return NULL;
+}
+
+bool isPointOverColl(float px, float py) {
+	for (int i = 0; i < COLLS_MAX; i++) {
+		Rect *coll = &game->colls[i];
+		if (coll->width != 0) {
+			if (coll->containsPoint(px, py)) return true;
+		}
+	}
+
+	return false;
 }
 
 bool getKeyPressed(int key) {

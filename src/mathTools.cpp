@@ -56,6 +56,10 @@ bool Rect::intersects(Rect *other) {
 bool Rect::containsPoint(Point *point) { return pointInRect(point->x, point->y, this->x, this->y, this->width, this->height); }
 bool Rect::containsPoint(float px, float py) { return pointInRect(px, py, this->x, this->y, this->width, this->height); }
 
+void Rect::print() {
+	printf("Rect: {%f, %f, %f, %f}\n", this->x, this->y, this->width, this->height);
+}
+
 void Matrix::identity() {
 	this->setTo(
 		1, 0, 0,
