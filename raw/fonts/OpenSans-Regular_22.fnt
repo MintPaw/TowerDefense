@@ -1,6 +1,6 @@
 info face="OpenSans-Regular" size=22 bold=0 italic=0 charset="" unicode=1 stretchH=100 smooth=1 aa=1 padding=0,0,0,0 spacing=3,3 outline=0
 common lineHeight=22 base=18 scaleW=512 scaleH=512 pages=1 packed=0 alphaChnl=0 redChnl=4 greenChnl=4 blueChnl=4
-page id=0 file="assets/font/bitmap/OpenSans-Regular_22_0.png"
+page id=0 file="assets/fonts/OpenSans-Regular_22_0.png"
 chars count=270
 char id=32   x=345   y=100   width=3     height=1     xoffset=-1    yoffset=21    xadvance=5     page=0  chnl=15
 char id=33   x=350   y=72    width=4     height=14    xoffset=1     yoffset=4     xadvance=6     page=0  chnl=15

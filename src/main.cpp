@@ -115,8 +115,7 @@ void update() {
 
 		game->mainFont = loadBitmapFontPath("assets/fonts/OpenSans-Regular_22.fnt");
 		game->testTextTexture = uploadTexture(NULL, 256, 256);
-		drawTextureToTexture(game->basicTurretGunTex, game->testTextTexture, 0, 0, 100, 10, 0, 0, 0x00000000, 1, 1, false);
-		// drawText(game->testTextTexture, "Hello, World!");
+		drawText(game->testTextTexture, game->mainFont, "Hello, World!");
 
 		{ /// Setup map
 			game->tilesetTexture = uploadPngTexturePath("assets/tilesets/tileset.png");

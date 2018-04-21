@@ -25,6 +25,5 @@ void drawSprite(Texture *tex, float x, float y);
 void defaultSpriteDef(SpriteDef *def);
 void drawSpriteEx(SpriteDef *def);
 void drawTextureToTexture(Texture *srcTex, Texture *destTex, int x, int y, int width, int height, int dx=0, int dy=0, int tint=0x00000000, float scaleX=1, float scaleY=1, bool bleed=false);
-void drawText(Texture *tex, const char *text);
 void setCameraExtents(float x, float y, float width, float height);
 void setCameraPosition(float x, float y);

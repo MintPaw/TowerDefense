@@ -270,8 +270,13 @@ Texture *uploadPngTexturePath(const char *path) {
 	void *pngData;
 	int pngSize = readFile(path, &pngData);
 	Texture *tex = uploadPngTexture(pngData, pngSize);
-	free(pngData);
 
+	if (!tex) {
+		printf("Failed to load image %s\n", path);
+		exit(1);
+	}
+
+	free(pngData);
 	return tex;
 }
 
@@ -279,7 +284,10 @@ Texture *uploadPngTexture(void *data, int size) {
 	int width, height, channels;
 	stbi_uc *img = 0;
 	img = stbi_load_from_memory((unsigned char *)data, size, &width, &height, &channels, 4);
-	Assert(img);
+	if (!img) {
+		printf("Failed to parse png bytes");
+		return NULL;
+	}
 
 	Texture *tex = uploadTexture(img, width, height);
 	free(img);
@@ -509,9 +517,6 @@ void drawTextureToTexture(Texture *srcTex, Texture *destTex, int x, int y, int w
 	glDisableVertexAttribArray(renderer->renderTextureProgram.a_texCoord);
 	glDisableVertexAttribArray(renderer->renderTextureProgram.a_position);
 	CheckGlError();
-}
-
-void drawText(Texture *tex, const char *text) {
 }
 
 void clearRenderer() {

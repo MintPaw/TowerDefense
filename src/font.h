@@ -16,6 +16,8 @@ struct BitmapFont {
 	BitmapKernDef *kernDefs;
 	int charDefsNum;
 	int kernDefsNum;
+
+	Texture *texture;
 };
 
 BitmapFont *loadBitmapFontPath(const char *fntPath);
