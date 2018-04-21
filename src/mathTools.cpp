@@ -117,6 +117,16 @@ void Matrix::rotate(float deg) {
 	this->multiply(array);
 }
 
+
+void Matrix::scale(float x, float y) {
+	float array[9] = {
+		x, 0, 0,
+		0, y, 0,
+		0, 0, 1
+	};
+	this->multiply(array);
+}
+
 void Matrix::multiply(float *array) {
 	float temp[9] = {};
 

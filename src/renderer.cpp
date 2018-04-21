@@ -45,12 +45,23 @@ struct TilemapProgram {
 	GLuint u_pixelRatio;
 };
 
+struct RenderTextureProgram {
+	GLuint program;
+	GLuint a_position;
+	GLuint a_texCoord;
+	GLuint u_matrix;
+	GLuint u_texture;
+	GLuint u_tint;
+	GLuint u_bleed;
+};
+
 struct Renderer {
 	int errorCount;
 
 	CircleProgram circleProgram;
 	SpriteProgram spriteProgram;
 	TilemapProgram tilemapProgram;
+	RenderTextureProgram renderTextureProgram;
 
 	GLuint tempVerts;
 	GLuint tempTexCoords;
@@ -132,6 +143,21 @@ void initRenderer() {
 	renderer->tilemapProgram.u_tilemapSize = glGetUniformLocation(renderer->tilemapProgram.program, "u_tilemapSize");
 	renderer->tilemapProgram.u_resultSize = glGetUniformLocation(renderer->tilemapProgram.program, "u_resultSize");
 	renderer->tilemapProgram.u_pixelRatio = glGetUniformLocation(renderer->tilemapProgram.program, "u_pixelRatio");
+
+	char *renderTextureVertStr;
+	char *renderTextureFragStr;
+	readFile("assets/shaders/renderTexture.vert", (void **)&renderTextureVertStr);
+	readFile("assets/shaders/renderTexture.frag", (void **)&renderTextureFragStr);
+	renderer->renderTextureProgram.program = buildShader(renderTextureVertStr, renderTextureFragStr);
+	free(renderTextureFragStr);
+	free(renderTextureVertStr);
+
+	renderer->renderTextureProgram.a_position = glGetAttribLocation(renderer->renderTextureProgram.program, "a_position");
+	renderer->renderTextureProgram.a_texCoord = glGetAttribLocation(renderer->renderTextureProgram.program, "a_texCoord");
+	renderer->renderTextureProgram.u_matrix = glGetUniformLocation(renderer->renderTextureProgram.program, "u_matrix");
+	renderer->renderTextureProgram.u_texture = glGetUniformLocation(renderer->renderTextureProgram.program, "u_texture");
+	renderer->renderTextureProgram.u_tint = glGetUniformLocation(renderer->renderTextureProgram.program, "u_tint");
+	renderer->renderTextureProgram.u_bleed = glGetUniformLocation(renderer->renderTextureProgram.program, "u_bleed");
 
 	CheckGlError();
 
@@ -294,6 +320,7 @@ void destroyTexture(Texture *tex) {
 
 void drawSprite(Texture *tex, float x, float y) {
 	SpriteDef def;
+	defaultSpriteDef(&def);
 	def.tex = tex;
 	def.pos.setTo(x, y);
 	drawSpriteEx(&def);
@@ -359,7 +386,6 @@ void drawSpriteEx(SpriteDef *def) {
 	glDisableVertexAttribArray(renderer->spriteProgram.a_position);
 	glDisableVertexAttribArray(renderer->spriteProgram.a_texCoord);
 	CheckGlError();
-
 }
 
 void drawTiles(Texture *srcTexture, Texture *destTexture, int tileWidth, int tileHeight, int tilesWide, int tilesHigh, int *tiles) {
@@ -424,6 +450,68 @@ void drawTiles(Texture *srcTexture, Texture *destTexture, int tileWidth, int til
 	setFramebuffer(0);
 	setViewport(0, 0, platform->windowWidth, platform->windowWidth);
 	CheckGlError();
+
+	glDisableVertexAttribArray(renderer->tilemapProgram.a_position);
+	CheckGlError();
+}
+
+void drawTextureToTexture(Texture *srcTex, Texture *destTex, int x, int y, int width, int height, int dx, int dy, int tint, float scaleX, float scaleY, bool bleed) {
+	int canvasWidth = destTex->width;
+	int canvasHeight = destTex->height;
+
+	setFramebuffer(renderer->textureFramebuffer);
+	setFramebufferTexture(destTex->textureId);
+
+	/////
+	// glCheckFramebufferStatus is really slow last I checked
+	/////
+	// if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) printf("Framebuffer is not ready!\n");
+
+	setShaderProgram(renderer->renderTextureProgram.program);
+	setViewport(0, 0, canvasWidth, canvasHeight);
+
+	changeArrayBuffer(renderer->tempVerts, 0, 0, width, height);
+	glEnableVertexAttribArray(renderer->renderTextureProgram.a_position);
+	glVertexAttribPointer(renderer->renderTextureProgram.a_position, 2, GL_FLOAT, false, 0, 0);
+
+	float texX = (float)x/srcTex->width;
+	float texY = (float)y/srcTex->height;
+	float texW = (float)width/srcTex->width;
+	float texH = (float)height/srcTex->height;
+	changeArrayBuffer(renderer->tempTexCoords, texX, texY, texX + texW, texY + texH);
+	glEnableVertexAttribArray(renderer->renderTextureProgram.a_texCoord);
+	glVertexAttribPointer(renderer->renderTextureProgram.a_texCoord, 2, GL_FLOAT, false, 0, 0);
+
+	glUniform4f(
+		renderer->renderTextureProgram.u_tint,
+		((tint >> 16) & 0xff) / 255.0,
+		((tint >> 8 ) & 0xff) / 255.0,
+		( tint        & 0xff) / 255.0,
+		((tint >> 24) & 0xff) / 255.0
+	);
+
+	glUniform1i(renderer->renderTextureProgram.u_bleed, bleed?1:0);
+
+	Matrix trans;
+	trans.identity();
+	trans.scale(1, -1);
+	trans.project(canvasWidth, canvasHeight);
+	trans.translate(dx, dy);
+	trans.scale(scaleX, scaleY);
+	glUniformMatrix3fv(renderer->renderTextureProgram.u_matrix, 1, false, (float *)trans.data);
+
+	setTexture(srcTex->textureId);
+	glUniform1i(renderer->renderTextureProgram.u_texture, 0);
+
+	glDrawArrays(GL_TRIANGLES, 0, 2*3);
+	CheckGlError();
+
+	glDisableVertexAttribArray(renderer->renderTextureProgram.a_texCoord);
+	glDisableVertexAttribArray(renderer->renderTextureProgram.a_position);
+	CheckGlError();
+}
+
+void drawText(Texture *tex, const char *text) {
 }
 
 void clearRenderer() {
