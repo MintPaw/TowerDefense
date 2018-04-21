@@ -1,12 +1,15 @@
 #pragma once
 
-float roundToNearest(float num, float nearest=1);
-
 struct Rect;
 struct Matrix;
 struct Point;
 
+float roundToNearest(float num, float nearest=1);
 bool pointInRect(float px, float py, float rx, float ry, float rw, float rh);
+float rnd();
+float rndFloat(float min, float max);
+int rndInt(int min, int max);
+bool rndBool();
 
 struct Rect {
 	float x;
@@ -18,6 +21,7 @@ struct Rect {
 	bool intersects(Rect *other);
 	bool containsPoint(Point *point);
 	bool containsPoint(float px, float py);
+	void randomPoint(Point *point);
 	void print();
 };
 

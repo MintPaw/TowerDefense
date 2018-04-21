@@ -111,7 +111,7 @@
   <object id="1" x="1809" y="1088" width="176" height="118"/>
  </objectgroup>
  <objectgroup name="meta">
-  <object id="3" name="spawner" type="bat" x="1886" y="1184" width="33" height="32">
+  <object id="3" name="spawner" type="bat" x="1887.75" y="1181" width="33" height="32">
    <properties>
     <property name="interval" type="float" value="5"/>
     <property name="max" type="int" value="10"/>

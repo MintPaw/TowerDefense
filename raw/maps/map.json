@@ -43,7 +43,7 @@
                  "properties":
                     {
                      "interval":5,
-                     "max":5
+                     "max":10
                     },
                  "propertytypes":
                     {
@@ -54,8 +54,8 @@
                  "type":"bat",
                  "visible":true,
                  "width":33,
-                 "x":1886,
-                 "y":1184
+                 "x":1887.75,
+                 "y":1181
                 }],
          "opacity":1,
          "type":"objectgroup",

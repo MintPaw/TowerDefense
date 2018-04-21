@@ -7,10 +7,20 @@ TODO:
 #define TURRETS_MAX 1024
 #define COLLS_MAX 1024
 #define SPAWNERS_MAX 1024
+#define ENEMY_MAX 8192
 
 enum TurretType { TURRET_BASIC };
 enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
 enum SpawnerType { SPAWNER_BATS };
+enum EnemyType { ENEMY_BAT };
+
+struct Enemy {
+	bool exists;
+	float x;
+	float y;
+	EnemyType type;
+	Texture *tex;
+};
 
 struct Spawner {
 	bool exists;
@@ -18,6 +28,8 @@ struct Spawner {
 	SpawnerType type;
 	float interval;
 	int max;
+
+	float timeLeft;
 };
 
 struct Turret {
@@ -48,41 +60,45 @@ struct Player {
 };
 
 struct Game {
-	Player player;
-
-	// Frame *spriteFrames;
-	int spriteFramesNum;
-	int tileSize;
-
-	tinytiled_map_t *tiledMap; 
 	Texture *tilesetTexture;
-	Texture *mapTexture;
-
-	Turret turrets[TURRETS_MAX];
-	Texture *basicTurretBaseTex;
-	Texture *basicTurretGunTex;
-
-	InvType currentInv;
-	Texture *selecterTexture;
-
-	Turret *selectedTurret;
-
+	Texture *basicTurretBaseTexture;
+	Texture *basicTurretGunTexture;
 	Texture *upgradeOption1Texture;
 	Texture *upgradeOption2Texture;
 	Texture *upgradeOption3Texture;
 	Texture *disassembleOptionTexture;
+	Texture *enemyBatTexture;
 
 	BitmapFont *mainFont;
+
+	Player player;
+
+	// Frame *spriteFrames;
+	// int spriteFramesNum;
+	int tileSize;
+
+	tinytiled_map_t *tiledMap; 
+	Texture *mapTexture;
+
+	Turret turrets[TURRETS_MAX];
+	Turret *selectedTurret;
+
+	InvType currentInv;
+	Texture *selecterTexture;
 
 	Texture *frameTimeText;
 
 	Rect colls[COLLS_MAX];
 	Spawner spawners[SPAWNERS_MAX];
+	Enemy enemies[ENEMY_MAX];
 };
 
 void update();
 bool getKeyPressed(int key);
 void buildTurret(int x, int y, InvType type);
+
+Enemy *spawnEnemy(float x, float y, EnemyType type);
+
 Turret *isRectOverTurret(Rect *rect);
 Turret *isPointOverTurret(float px, float py);
 bool isPointOverColl(float px, float py);
@@ -116,20 +132,23 @@ void update() {
 		game->player.tex = uploadPngTexturePath("assets/sprites/player.png");
 		game->currentInv = INV_HANDS;
 
+		game->tilesetTexture = uploadPngTexturePath("assets/tilesets/tileset.png");
+
 		game->upgradeOption1Texture = uploadPngTexturePath("assets/sprites/upgradeOption1.png");
 		game->upgradeOption2Texture = uploadPngTexturePath("assets/sprites/upgradeOption2.png");
 		game->upgradeOption3Texture = uploadPngTexturePath("assets/sprites/upgradeOption3.png");
 		game->disassembleOptionTexture = uploadPngTexturePath("assets/sprites/disassembleOption.png");
 
-		game->basicTurretBaseTex = uploadPngTexturePath("assets/sprites/basicTurretBase.png");
-		game->basicTurretGunTex = uploadPngTexturePath("assets/sprites/basicTurretGun.png");
+		game->basicTurretBaseTexture = uploadPngTexturePath("assets/sprites/basicTurretBase.png");
+		game->basicTurretGunTexture = uploadPngTexturePath("assets/sprites/basicTurretGun.png");
+
+		game->enemyBatTexture = uploadPngTexturePath("assets/sprites/enemyBat.png");
 
 		game->mainFont = loadBitmapFontPath("assets/fonts/OpenSans-Regular_22.fnt");
+
 		game->frameTimeText = uploadTexture(NULL, 512, 256);
 
 		{ /// Setup map
-			game->tilesetTexture = uploadPngTexturePath("assets/tilesets/tileset.png");
-
 			void *mapData;
 			long mapSize = readFile("assets/maps/map.json", &mapData);
 			game->tiledMap = tinytiled_load_map_from_memory(mapData, mapSize, 0);
@@ -158,6 +177,8 @@ void update() {
 							for (int i = 0; i < SPAWNERS_MAX; i++) {
 								Spawner *spawner = &game->spawners[i];
 								if (!spawner->exists) {
+									memset(spawner, 0, sizeof(Spawner));
+									spawner->exists = true;
 									spawner->rect.setTo(object->x, object->y, object->width, object->height);
 									for (int j = 0; j < object->property_count; j++) {
 										tinytiled_property_t *prop = &object->properties[j];
@@ -177,12 +198,6 @@ void update() {
 					object = object->next;
 				}
 
-				// int *data = layer->data;
-				// int dataNum = layer->data_count;
-
-				// for (int i = 0; i < dataNum; i++) {
-				// 	printf("Data: %d\n", data[i]);
-				// }
 				layer = layer->next;
 			}
 
@@ -394,6 +409,21 @@ void update() {
 
 	}
 
+	{ /// Spawners
+		for (int i = 0; i < SPAWNERS_MAX; i++) {
+			Spawner *spawner = &game->spawners[i];
+			if (spawner->exists) {
+				spawner->timeLeft -= platform->elapsed;
+				if (spawner->timeLeft <= 0) {
+					Point spawnPoint;
+					spawner->rect.randomPoint(&spawnPoint);
+					spawnEnemy(spawnPoint.x, spawnPoint.y, ENEMY_BAT);
+					spawner->timeLeft = spawner->interval;
+				}
+			}
+		}
+	}
+
 	{ /// Hud
 		drawText(game->frameTimeText, game->mainFont, "Frame time: %d", platform->frameTime);
 	}
@@ -444,6 +474,19 @@ void update() {
 		drawSpriteEx(&def);
 	}
 
+	{ /// Draw enemies
+		for (int i = 0; i < ENEMY_MAX; i++) {
+			Enemy *enemy = &game->enemies[i];
+			if (enemy->exists) {
+				defaultSpriteDef(&def);
+				def.tex = enemy->tex;
+				def.pos.x = enemy->x;
+				def.pos.y = enemy->y;
+				drawSpriteEx(&def);
+			}
+		}
+	}
+
 	{ /// Draw selecter
 		defaultSpriteDef(&def);
 		def.tex = game->selecterTexture;
@@ -487,9 +530,31 @@ void buildTurret(int x, int y, InvType type) {
 	turret->y = y;
 	if (type == INV_TURRET_BASIC) {
 		turret->type = TURRET_BASIC;
-		turret->baseTex = game->basicTurretBaseTex;
-		turret->gunTex = game->basicTurretGunTex;
+		turret->baseTex = game->basicTurretBaseTexture;
+		turret->gunTex = game->basicTurretGunTexture;
 	}
+}
+
+Enemy *spawnEnemy(float x, float y, EnemyType type) {
+	for (int i = 0; i < ENEMY_MAX; i++) {
+		Enemy *enemy = &game->enemies[i];
+		if (!enemy->exists) {
+			memset(enemy, 0, sizeof(Enemy));
+			enemy->exists = true;
+
+			if (type == ENEMY_BAT) {
+				enemy->tex = game->enemyBatTexture;
+			}
+
+			enemy->x = x - enemy->tex->width/2;
+			enemy->y = y - enemy->tex->height/2;
+			enemy->type = type;
+
+			return enemy;
+		}
+	}
+
+	return NULL;
 }
 
 Turret *isRectOverTurret(Rect *rect) {

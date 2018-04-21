@@ -14,6 +14,18 @@ bool pointInRect(float px, float py, float rx, float ry, float rw, float rh) {
 	return px >= rx && px <= rx+(rw-1) && py >= ry && py <= ry+(rh-1);
 }
 
+float rnd() {
+	return (float)rand()/(float)RAND_MAX;
+}
+
+float rndFloat(float min, float max) {
+	return min + rnd() * (max - min);
+}
+
+int rndInt(int min, int max) {
+	return round((rndFloat(min, max)));
+}
+
 void Rect::setTo(float x, float y, float width, float height) {
 	this->x = x;
 	this->y = y;
@@ -55,6 +67,11 @@ bool Rect::intersects(Rect *other) {
 
 bool Rect::containsPoint(Point *point) { return pointInRect(point->x, point->y, this->x, this->y, this->width, this->height); }
 bool Rect::containsPoint(float px, float py) { return pointInRect(px, py, this->x, this->y, this->width, this->height); }
+
+void Rect::randomPoint(Point *point) {
+	point->x = rndFloat(this->x, this->x + this->width);
+	point->y = rndFloat(this->y, this->y + this->height);
+}
 
 void Rect::print() {
 	printf("Rect: {%f, %f, %f, %f}\n", this->x, this->y, this->width, this->height);

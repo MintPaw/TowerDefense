@@ -29,6 +29,7 @@ struct Platform {
 	bool mouseJustDown;
 
 	int frameTime;
+	float elapsed;
 };
 
 Platform *platform;
@@ -40,6 +41,7 @@ void initPlatform() {
 	memset(platform, 0, sizeof(Platform));
 	platform->windowWidth = 1280;
 	platform->windowHeight = 720;
+	platform->elapsed = 1/60.0;
 
 	timeBeginPeriod(1);
 
