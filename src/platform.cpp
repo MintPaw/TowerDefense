@@ -41,6 +41,8 @@ void initPlatform() {
 	platform->windowWidth = 1280;
 	platform->windowHeight = 720;
 
+	timeBeginPeriod(1);
+
 	Assert(!SDL_Init(SDL_INIT_VIDEO));
 
 #ifdef GL_CORE
@@ -59,7 +61,7 @@ void initPlatform() {
 	platform->sdlContext = SDL_GL_CreateContext(platform->sdlWindow);
 	Assert(platform->sdlContext);
 
-	Assert(!SDL_GL_SetSwapInterval(1));
+	Assert(!SDL_GL_SetSwapInterval(0));
 
 	glewExperimental = GL_TRUE; 
 	Assert(glewInit() == GLEW_OK);
@@ -71,7 +73,10 @@ void platformUpdateLoop(void (*updateCallbcak)()) {
 		int startTime = SDL_GetTicks();
 		updateEvents();
 		updateCallbcak();
+
 		platform->frameTime = SDL_GetTicks() - startTime;
+		int sleepTime = ceilf(1.0/60.0*1000.0) - platform->frameTime;
+		if (sleepTime > 0) Sleep(sleepTime);
 	}
 }
 
