@@ -8,6 +8,7 @@ TODO:
 #define COLLS_MAX 1024
 #define SPAWNERS_MAX 1024
 #define ENEMY_MAX 8192
+#define ENEMIES_PER_SPAWNER_MAX 256
 
 enum TurretType { TURRET_BASIC };
 enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
@@ -30,6 +31,8 @@ struct Spawner {
 	int max;
 
 	float timeLeft;
+	Enemy *enemies[ENEMIES_PER_SPAWNER_MAX];
+	int enemyCount;
 };
 
 struct Turret {
@@ -414,11 +417,21 @@ void update() {
 			Spawner *spawner = &game->spawners[i];
 			if (spawner->exists) {
 				spawner->timeLeft -= platform->elapsed;
-				if (spawner->timeLeft <= 0) {
+				if (spawner->timeLeft <= 0 && spawner->enemyCount < spawner->max) {
 					Point spawnPoint;
 					spawner->rect.randomPoint(&spawnPoint);
 					spawnEnemy(spawnPoint.x, spawnPoint.y, ENEMY_BAT);
+					spawner->enemyCount++;
 					spawner->timeLeft = spawner->interval;
+				}
+
+				for (int j = 0; j < ENEMIES_PER_SPAWNER_MAX; j++) {
+					Enemy *enemy = spawner->enemies[j];
+
+					if (enemy && !enemy->exists) {
+						spawner->enemies[j] = NULL;
+						spawner->enemyCount--;
+					}
 				}
 			}
 		}
