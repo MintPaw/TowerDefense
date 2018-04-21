@@ -6,10 +6,14 @@ struct Point;
 
 float roundToNearest(float num, float nearest=1);
 bool pointInRect(float px, float py, float rx, float ry, float rw, float rh);
+
 float rnd();
 float rndFloat(float min, float max);
 int rndInt(int min, int max);
 bool rndBool();
+
+float distanceBetween(float x1, float y1, float x2, float y2);
+float radsBetween(float x1, float y1, float x2, float y2);
 
 struct Rect {
 	float x;

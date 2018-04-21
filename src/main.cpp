@@ -10,17 +10,27 @@ TODO:
 #define ENEMY_MAX 8192
 #define ENEMIES_PER_SPAWNER_MAX 256
 
+#define ENEMY_BAT_IDLE_TIME 3
+#define ENEMY_BAT_MOVE_DIST 96
+#define ENEMY_BAT_MOVE_SPEED 0.3
+
 enum TurretType { TURRET_BASIC };
 enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
 enum SpawnerType { SPAWNER_BATS };
 enum EnemyType { ENEMY_BAT };
+enum EnemyState { STATE_IDLE=0, STATE_MOVING };
 
 struct Enemy {
 	bool exists;
 	float x;
 	float y;
+	float spawnTime;
 	EnemyType type;
 	Texture *tex;
+
+	EnemyState state;
+	float stateTime;
+	Point nextPos;
 };
 
 struct Spawner {
@@ -437,6 +447,44 @@ void update() {
 		}
 	}
 
+	{ /// Enemies
+		for (int i = 0; i < ENEMY_MAX; i++) {
+			Enemy *enemy = &game->enemies[i];
+			if (!enemy->exists) continue;
+
+			float idleLimit;
+			float moveSpeed;
+			float moveDist;
+			if (enemy->type == ENEMY_BAT) {
+				idleLimit = ENEMY_BAT_IDLE_TIME;
+				moveSpeed = ENEMY_BAT_MOVE_SPEED;
+				moveDist = ENEMY_BAT_MOVE_DIST;
+			}
+
+			enemy->stateTime += platform->elapsed;
+			if (enemy->state == STATE_IDLE) {
+				if (enemy->stateTime > idleLimit) {
+					enemy->state = STATE_MOVING;
+					enemy->stateTime = 0;
+					enemy->nextPos.x = enemy->x + rndFloat(-moveDist, moveDist);
+					enemy->nextPos.y = enemy->y + rndFloat(-moveDist, moveDist);
+				}
+			}
+
+			if (enemy->state == STATE_MOVING) {
+				float angle = radsBetween(enemy->x, enemy->y, enemy->nextPos.x, enemy->nextPos.y);
+				enemy->x += cos(angle);
+				enemy->y += sin(angle);
+
+				if (distanceBetween(enemy->x, enemy->y, enemy->nextPos.x, enemy->nextPos.y) < 10) {
+					enemy->state = STATE_IDLE;
+					enemy->stateTime = 0;
+				}
+			}
+		}
+
+	}
+
 	{ /// Hud
 		drawText(game->frameTimeText, game->mainFont, "Frame time: %d", platform->frameTime);
 	}
@@ -495,6 +543,11 @@ void update() {
 				def.tex = enemy->tex;
 				def.pos.x = enemy->x;
 				def.pos.y = enemy->y;
+
+				if (enemy->type == ENEMY_BAT) {
+					def.pos.y += cos((platform->time - enemy->spawnTime)*2.0) * 3.0;
+				}
+
 				drawSpriteEx(&def);
 			}
 		}
@@ -554,6 +607,7 @@ Enemy *spawnEnemy(float x, float y, EnemyType type) {
 		if (!enemy->exists) {
 			memset(enemy, 0, sizeof(Enemy));
 			enemy->exists = true;
+			enemy->spawnTime = platform->time;
 
 			if (type == ENEMY_BAT) {
 				enemy->tex = game->enemyBatTexture;

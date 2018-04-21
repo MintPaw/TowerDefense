@@ -30,6 +30,7 @@ struct Platform {
 
 	int frameTime;
 	float elapsed;
+	float time;
 };
 
 Platform *platform;
@@ -73,6 +74,8 @@ void platformUpdateLoop(void (*updateCallbcak)()) {
 	platform->running = true;
 	while (platform->running) {
 		int startTime = SDL_GetTicks();
+		platform->time += platform->elapsed;
+
 		updateEvents();
 		updateCallbcak();
 
