@@ -57,7 +57,7 @@ BitmapFont *loadBitmapFontPath(const char *fntPath) {
 			char *secondQuote = strstr(firstQuote + 1, "\"");
 			font->pngPath = (char *)malloc((secondQuote - firstQuote) + 1); // This +1 might not be needed because I'm skipping the first quote on the next line
 			int pathLen = secondQuote - firstQuote - 1;
-			strncpy(font->pngPath, firstQuote + 1, nameLen);
+			strncpy(font->pngPath, firstQuote + 1, pathLen);
 			font->pngPath[pathLen] = '\0';
 		}
 
