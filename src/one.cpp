@@ -10,11 +10,12 @@
 #include "../lib/tinytiled.h"
 
 #include "mathTools.cpp"
-#include "props.cpp"
 #include "memoryTools.cpp"
-#include "font.cpp"
 
 #include "platform.cpp"
 #include "renderer.cpp"
+
+#include "font.cpp"
+#include "props.cpp"
 
 #include "main.cpp"

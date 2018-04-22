@@ -2,6 +2,10 @@
 #include <GL/glew.h>
 #include <SDL2/SDL_opengl.h>
 
+#ifdef __linux__
+#include <time.h>
+#endif
+
 #include "platform.h"
 
 #define Assert(expr) engineAssert(expr, __FILE__, __LINE__)
@@ -12,6 +16,7 @@
 
 void updateEvents();
 void engineAssert(bool expr, const char *filename, int lineNum);
+void platformSleep(int ms);
 
 struct Platform {
 	SDL_Window *sdlWindow;
@@ -44,7 +49,9 @@ void initPlatform() {
 	platform->windowHeight = 720;
 	platform->elapsed = 1/60.0;
 
+#ifdef _WIN32
 	timeBeginPeriod(1);
+#endif
 
 	Assert(!SDL_Init(SDL_INIT_VIDEO));
 
@@ -80,8 +87,8 @@ void platformUpdateLoop(void (*updateCallbcak)()) {
 		updateCallbcak();
 
 		platform->frameTime = SDL_GetTicks() - startTime;
-		int sleepTime = ceilf(1.0/60.0*1000.0) - platform->frameTime;
-		if (sleepTime > 0) Sleep(sleepTime);
+		int sleepMs = ceilf(1.0/60.0*1000.0) - platform->frameTime;
+		if (sleepMs > 0) platformSleep(sleepMs);
 	}
 }
 
@@ -163,4 +170,15 @@ void engineAssert(bool expr, const char *filename, int lineNum) {
 		printf("Assert failed at %s line %d\n", filename, lineNum);
 		exit(1);
 	}
+}
+
+void platformSleep(int ms) {
+#ifdef _WIN32
+	Sleep(ms);
+#elif __linux__
+	timespec ts;
+	ts.tv_sec = ms / 1000;
+	ts.tv_nsec = (ms % 1000) * 1000000;
+	nanosleep(&ts, NULL);
+#endif
 }
