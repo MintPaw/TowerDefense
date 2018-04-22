@@ -10,10 +10,6 @@ TODO:
 #define ENEMY_MAX 8192
 #define ENEMIES_PER_SPAWNER_MAX 256
 
-#define ENEMY_BAT_IDLE_TIME 3
-#define ENEMY_BAT_MOVE_DIST 96
-#define ENEMY_BAT_MOVE_SPEED 0.3
-
 enum TurretType { TURRET_BASIC };
 enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
 enum SpawnerType { SPAWNER_BATS };
@@ -452,13 +448,17 @@ void update() {
 			Enemy *enemy = &game->enemies[i];
 			if (!enemy->exists) continue;
 
+			Point enemyCenter = {enemy->x + enemy->tex->width/2, enemy->y + enemy->tex->height/2};
+
 			float idleLimit;
 			float moveSpeed;
-			float moveDist;
+			float moveDistMin;
+			float moveDistMax;
 			if (enemy->type == ENEMY_BAT) {
-				idleLimit = ENEMY_BAT_IDLE_TIME;
-				moveSpeed = ENEMY_BAT_MOVE_SPEED;
-				moveDist = ENEMY_BAT_MOVE_DIST;
+				idleLimit = 3;
+				moveSpeed = 0.3;
+				moveDistMin = 32;
+				moveDistMax = 96;
 			}
 
 			enemy->stateTime += platform->elapsed;
@@ -466,21 +466,23 @@ void update() {
 				if (enemy->stateTime > idleLimit) {
 					enemy->state = STATE_MOVING;
 					enemy->stateTime = 0;
-					enemy->nextPos.x = enemy->x + rndFloat(-moveDist, moveDist);
-					enemy->nextPos.y = enemy->y + rndFloat(-moveDist, moveDist);
+					enemy->nextPos.x = enemyCenter.x + (rndFloat(moveDistMin, moveDistMax) * (rnd() > 0.5 ? -1 : 1));
+					enemy->nextPos.y = enemyCenter.y + (rndFloat(moveDistMin, moveDistMax) * (rnd() > 0.5 ? -1 : 1));
 				}
 			}
 
 			if (enemy->state == STATE_MOVING) {
-				float angle = radsBetween(enemy->x, enemy->y, enemy->nextPos.x, enemy->nextPos.y);
+				float angle = radsBetween(enemyCenter.x, enemyCenter.y, enemy->nextPos.x, enemy->nextPos.y);
 				enemy->x += cos(angle);
 				enemy->y += sin(angle);
 
-				if (distanceBetween(enemy->x, enemy->y, enemy->nextPos.x, enemy->nextPos.y) < 10) {
+				if (distanceBetween(enemyCenter.x, enemyCenter.y, enemy->nextPos.x, enemy->nextPos.y) < 10) {
 					enemy->state = STATE_IDLE;
 					enemy->stateTime = 0;
 				}
 			}
+
+			float playerDist = distanceBetween(enemyCenter.x, enemyCenter.y, playerCenter.x, playerCenter.y);
 		}
 
 	}
