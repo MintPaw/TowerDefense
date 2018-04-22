@@ -32,6 +32,9 @@ struct Enemy {
 	Turret *targetTurret;
 	bool chasingPlayer;
 	Rect chaseRect;
+
+	float hp;
+	float maxHp;
 };
 
 struct Spawner {
@@ -54,6 +57,9 @@ struct Turret {
 	float gunRotation;
 	int x;
 	int y;
+
+	float hp;
+	float maxHp;
 };
 
 // struct Frame {
@@ -71,6 +77,9 @@ struct Player {
 	float x;
 	float y;
 	Texture *tex;
+
+	float hp;
+	float maxHp;
 };
 
 struct Game {
@@ -147,6 +156,8 @@ void update() {
 		memset(game, 0, sizeof(Game));
 
 		game->player.tex = uploadPngTexturePath("assets/sprites/player.png");
+		game->player.maxHp = game->player.hp = 100;
+
 		game->currentInv = INV_HANDS;
 
 		game->tilesetTexture = uploadPngTexturePath("assets/tilesets/tileset.png");
@@ -649,19 +660,19 @@ void update() {
 	}
 
 	{ /// Draw hp bars
-		drawHpBar(player->x + player->tex->width/2, player->y + player->tex->height + 5, 100, 100);
+		drawHpBar(player->x + player->tex->width/2, player->y + player->tex->height + 5, player->hp, player->maxHp);
 
 		for (int i = 0; i < TURRETS_MAX; i++) {
 			Turret *turret = &game->turrets[i];
 			if (turret->exists) {
-				drawHpBar(turret->x + turret->baseTex->width/2, turret->y + turret->baseTex->height - 10, 100, 100);
+				drawHpBar(turret->x + turret->baseTex->width/2, turret->y + turret->baseTex->height - 10, turret->hp, turret->maxHp);
 			}
 		}
 
 		for (int i = 0; i < ENEMY_MAX; i++) {
 			Enemy *enemy = &game->enemies[i];
 			if (enemy->exists) {
-				drawHpBar(enemy->x + enemy->tex->width/2, enemy->y + enemy->tex->height + 5, 100, 100);
+				drawHpBar(enemy->x + enemy->tex->width/2, enemy->y + enemy->tex->height + 5, enemy->hp, enemy->maxHp);
 			}
 		}
 	}
@@ -696,6 +707,8 @@ void buildTurret(int x, int y, InvType type) {
 		turret->type = TURRET_BASIC;
 		turret->baseTex = game->basicTurretBaseTexture;
 		turret->gunTex = game->basicTurretGunTexture;
+
+		turret->maxHp = turret->hp = 100;
 	}
 }
 
@@ -709,6 +722,7 @@ Enemy *spawnEnemy(float x, float y, EnemyType type) {
 
 			if (type == ENEMY_BAT) {
 				enemy->tex = game->enemyBatTexture;
+				enemy->maxHp = enemy->hp = 20;
 			}
 
 			enemy->x = x - enemy->tex->width/2;
