@@ -518,17 +518,19 @@ void update() {
 			enemy->chasingPlayer = false;
 			enemy->targetTurret = NULL;
 
+			bool targetInRange = false;
 			if (playerDist < turretDist && playerDist < aggroRange) {
 				enemy->chasingPlayer = true;
 				enemy->chaseRect.setTo(player->x, player->y, player->tex->width, player->tex->height);
-				enemy->state = STATE_CHASING;
+				targetInRange = true;
 			} else if (turretDist < playerDist && turretDist < aggroRange) {
 				enemy->targetTurret = closestTurret;
 				enemy->chaseRect.setTo(closestTurret->x, closestTurret->y, closestTurret->baseTex->width, closestTurret->baseTex->height);
-				enemy->state = STATE_CHASING;
+				targetInRange = true;
 			}
 
-			if (enemy->state == STATE_CHASING) {
+			if (targetInRange) {
+				enemy->state = STATE_CHASING;
 				Rect enemyRect = {enemy->x, enemy->y, (float)enemy->tex->width, (float)enemy->tex->height};
 				if (enemyRect.intersects(&enemy->chaseRect)) {
 					enemy->state = STATE_ATTACKING;
@@ -538,6 +540,10 @@ void update() {
 					enemy->x += cos(angle) * chaseSpeed;
 					enemy->y += sin(angle) * chaseSpeed;
 				}
+			}
+
+			if (!targetInRange && (enemy->state == STATE_CHASING || enemy->state == STATE_ATTACKING)) {
+				enemy->state = STATE_IDLE;
 			}
 
 			if (enemy->state == STATE_ATTACKING) {
