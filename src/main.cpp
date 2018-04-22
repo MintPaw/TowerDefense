@@ -18,7 +18,7 @@ enum TurretType { TURRET_BASIC };
 enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
 enum SpawnerType { SPAWNER_BATS };
 enum EnemyType { ENEMY_BAT };
-enum EnemyState { STATE_IDLE=0, STATE_MOVING };
+enum EnemyState { STATE_IDLE=0, STATE_MOVING, STATE_CHASING, STATE_ATTACKING };
 
 struct Enemy {
 	bool exists;
