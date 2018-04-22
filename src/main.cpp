@@ -16,6 +16,8 @@ enum SpawnerType { SPAWNER_BATS };
 enum EnemyType { ENEMY_BAT };
 enum EnemyState { STATE_IDLE=0, STATE_MOVING, STATE_CHASING, STATE_ATTACKING };
 
+struct Turret;
+
 struct Enemy {
 	bool exists;
 	float x;
@@ -27,6 +29,9 @@ struct Enemy {
 	EnemyState state;
 	float stateTime;
 	Point nextPos;
+	Turret *targetTurret;
+	bool chasingPlayer;
+	Rect chaseRect;
 };
 
 struct Spawner {
@@ -111,6 +116,7 @@ Enemy *spawnEnemy(float x, float y, EnemyType type);
 Turret *isRectOverTurret(Rect *rect);
 Turret *isPointOverTurret(float px, float py);
 bool isPointOverColl(float px, float py);
+Turret *getClosestTurret(float px, float py);
 
 Game *game;
 
@@ -452,13 +458,17 @@ void update() {
 
 			float idleLimit;
 			float moveSpeed;
+			float chaseSpeed;
 			float moveDistMin;
 			float moveDistMax;
+			float aggroRange;
 			if (enemy->type == ENEMY_BAT) {
 				idleLimit = 3;
-				moveSpeed = 0.3;
+				moveSpeed = 1;
+				chaseSpeed = 3;
 				moveDistMin = 32;
 				moveDistMax = 96;
+				aggroRange = 96;
 			}
 
 			enemy->stateTime += platform->elapsed;
@@ -473,8 +483,8 @@ void update() {
 
 			if (enemy->state == STATE_MOVING) {
 				float angle = radsBetween(enemyCenter.x, enemyCenter.y, enemy->nextPos.x, enemy->nextPos.y);
-				enemy->x += cos(angle);
-				enemy->y += sin(angle);
+				enemy->x += cos(angle) * moveSpeed;
+				enemy->y += sin(angle) * moveSpeed;
 
 				if (distanceBetween(enemyCenter.x, enemyCenter.y, enemy->nextPos.x, enemy->nextPos.y) < 10) {
 					enemy->state = STATE_IDLE;
@@ -483,6 +493,41 @@ void update() {
 			}
 
 			float playerDist = distanceBetween(enemyCenter.x, enemyCenter.y, playerCenter.x, playerCenter.y);
+
+			Turret *closestTurret = getClosestTurret(enemyCenter.x, enemyCenter.y);
+			float turretDist = 9999999999;
+			if (closestTurret) {
+				turretDist = distanceBetween(
+					enemyCenter.x, enemyCenter.y,
+					closestTurret->x + closestTurret->baseTex->width/2, closestTurret->y + closestTurret->baseTex->height/2
+				);
+			}
+
+			//@cleanup Do these vars even need to be inside the enemy struct? Same with chaseRect
+			enemy->chasingPlayer = false;
+			enemy->targetTurret = NULL;
+
+			if (playerDist < turretDist && playerDist < aggroRange) {
+				enemy->chasingPlayer = true;
+				enemy->chaseRect.setTo(player->x, player->y, player->tex->width, player->tex->height);
+				enemy->state = STATE_CHASING;
+			} else if (turretDist < playerDist && turretDist < aggroRange) {
+				enemy->targetTurret = closestTurret;
+				enemy->chaseRect.setTo(closestTurret->x, closestTurret->y, closestTurret->baseTex->width, closestTurret->baseTex->height);
+				enemy->state = STATE_CHASING;
+			}
+
+			if (enemy->state == STATE_CHASING) {
+				Rect enemyRect = {enemy->x, enemy->y, (float)enemy->tex->width, (float)enemy->tex->height};
+				if (enemyRect.intersects(&enemy->chaseRect)) {
+					enemy->state = STATE_ATTACKING;
+				} else {
+					Point chaseCenter = {enemy->chaseRect.x + enemy->chaseRect.width/2, enemy->chaseRect.y + enemy->chaseRect.height/2};
+					float angle = radsBetween(enemyCenter.x, enemyCenter.y, chaseCenter.x, chaseCenter.y);
+					enemy->x += cos(angle) * chaseSpeed;
+					enemy->y += sin(angle) * chaseSpeed;
+				}
+			}
 		}
 
 	}
@@ -547,7 +592,29 @@ void update() {
 				def.pos.y = enemy->y;
 
 				if (enemy->type == ENEMY_BAT) {
-					def.pos.y += cos((platform->time - enemy->spawnTime)*2.0) * 3.0;
+					float floatSpeedX;
+					float floatSpeedY;
+					float floatDistX;
+					float floatDistY;
+
+					if (enemy->state == STATE_ATTACKING) {
+						floatSpeedX = 20;
+						floatSpeedY = 10;
+						floatDistX = 3;
+						floatDistY = 3;
+					} else {
+						floatSpeedX = 0;
+						floatSpeedY = 2;
+						floatDistX = 0;
+						floatDistY = 3;
+					}
+
+					def.pos.x += cos((platform->time - enemy->spawnTime)*floatSpeedX) * floatDistX;
+					def.pos.y += cos((platform->time - enemy->spawnTime)*floatSpeedY) * floatDistY;
+				}
+
+				if (enemy->state == STATE_CHASING) {
+					def.tint = 0x88FF0000;
 				}
 
 				drawSpriteEx(&def);
@@ -662,6 +729,24 @@ bool isPointOverColl(float px, float py) {
 	}
 
 	return false;
+}
+
+Turret *getClosestTurret(float px, float py) {
+	Turret *closest = NULL;
+	float dist = 0;
+
+	for (int i = 0; i < TURRETS_MAX; i++) {
+		Turret *turret = &game->turrets[i];
+		if (turret->exists) {
+			float curDist = distanceBetween(px, py, turret->x + turret->baseTex->width/2, turret->y + turret->baseTex->height/2);
+			if (curDist < dist || closest == NULL) {
+				dist = curDist;
+				closest = turret;
+			}
+		}
+	}
+
+	return closest;
 }
 
 bool getKeyPressed(int key) {
