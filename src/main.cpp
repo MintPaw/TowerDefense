@@ -646,6 +646,8 @@ void update() {
 		drawSpriteEx(&def);
 	}
 
+	// drawRect(player->x + 100 - renderer->camPos.x, player->y + 100 - renderer->camPos.y, 100, 100, 0xFFFFFFFF);
+
 	swapBuffers();
 }
 

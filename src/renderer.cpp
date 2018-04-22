@@ -33,6 +33,13 @@ struct CircleProgram {
 	GLuint u_projection;
 };
 
+struct RectProgram {
+	GLuint program;
+	GLuint a_position;
+	GLuint u_colour;
+	GLuint u_projection;
+};
+
 struct TilemapProgram {
 	GLuint program;
 	GLuint a_position;
@@ -59,6 +66,7 @@ struct Renderer {
 	int errorCount;
 
 	CircleProgram circleProgram;
+	RectProgram rectProgram;
 	SpriteProgram spriteProgram;
 	TilemapProgram tilemapProgram;
 	RenderTextureProgram renderTextureProgram;
@@ -111,6 +119,18 @@ void initRenderer() {
 	renderer->circleProgram.a_texCoord = glGetAttribLocation(renderer->circleProgram.program, "a_texCoord");
 	renderer->circleProgram.u_colour = glGetUniformLocation(renderer->circleProgram.program, "u_colour");
 	renderer->circleProgram.u_projection = glGetUniformLocation(renderer->circleProgram.program, "u_projection");
+
+	char *rectVertStr;
+	char *rectFragStr;
+	readFile("assets/shaders/rect.vert", (void **)&rectVertStr);
+	readFile("assets/shaders/rect.frag", (void **)&rectFragStr);
+	renderer->rectProgram.program = buildShader(rectVertStr, rectFragStr);
+	free(rectFragStr);
+	free(rectVertStr);
+
+	renderer->rectProgram.a_position = glGetAttribLocation(renderer->rectProgram.program, "a_position");
+	renderer->rectProgram.u_colour = glGetUniformLocation(renderer->rectProgram.program, "u_colour");
+	renderer->rectProgram.u_projection = glGetUniformLocation(renderer->rectProgram.program, "u_projection");
 
 	char *spriteVertStr;
 	char *spriteFragStr;
@@ -265,6 +285,38 @@ void drawCircle(float x, float y, float radius, int colour) {
 
 	CheckGlError();
 }
+
+void drawRect(float x, float y, float width, float height, int colour) {
+	setGlViewport(0, 0, platform->windowWidth, platform->windowHeight);
+	setShaderProgram(renderer->rectProgram.program);
+	CheckGlError();
+
+	glEnableVertexAttribArray(renderer->rectProgram.a_position);
+	changeArrayBuffer(renderer->tempVerts, x, y, x+width, y+height);
+	glVertexAttribPointer(renderer->rectProgram.a_position, 2, GL_FLOAT, false, 0, NULL);
+	CheckGlError();
+
+	Matrix projection;
+	projection.identity();
+	projection.project(platform->windowWidth, platform->windowHeight);
+	glUniformMatrix3fv(renderer->rectProgram.u_projection, 1, false, (float *)projection.data);
+
+	glUniform4f(
+		renderer->rectProgram.u_colour,
+		((colour >> 16) & 0xff)/255.0,
+		((colour >> 8) & 0xff)/255.0,
+		(colour & 0xff)/255.0,
+		((colour >> 24) & 0xff)/255.0
+	);
+	CheckGlError();
+
+	glDrawArrays(GL_TRIANGLES, 0, 2*3);
+
+	glDisableVertexAttribArray(renderer->rectProgram.a_position);
+
+	CheckGlError();
+}
+
 
 Texture *uploadPngTexturePath(const char *path) {
 	void *pngData;
