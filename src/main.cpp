@@ -118,6 +118,8 @@ Turret *isPointOverTurret(float px, float py);
 bool isPointOverColl(float px, float py);
 Turret *getClosestTurret(float px, float py);
 
+void drawHpBar(float x, float y, float value, float total);
+
 Game *game;
 
 #ifdef _MSC_VER
@@ -646,9 +648,34 @@ void update() {
 		drawSpriteEx(&def);
 	}
 
+	{ /// Draw hp bars
+		drawHpBar(player->x + player->tex->width/2, player->y + player->tex->height + 5, 100, 100);
+
+		for (int i = 0; i < TURRETS_MAX; i++) {
+			Turret *turret = &game->turrets[i];
+			if (turret->exists) {
+				drawHpBar(turret->x + turret->baseTex->width/2, turret->y + turret->baseTex->height - 10, 100, 100);
+			}
+		}
+
+		for (int i = 0; i < ENEMY_MAX; i++) {
+			Enemy *enemy = &game->enemies[i];
+			if (enemy->exists) {
+				drawHpBar(enemy->x + enemy->tex->width/2, enemy->y + enemy->tex->height + 5, 100, 100);
+			}
+		}
+	}
+
 	// drawRect(player->x + 100 - renderer->camPos.x, player->y + 100 - renderer->camPos.y, 100, 100, 0xFFFFFFFF);
 
 	swapBuffers();
+}
+
+void drawHpBar(float x, float y, float value, float total) {
+	float width = total/1.5;
+
+	drawRect(x - width/2 - renderer->camPos.x, y - renderer->camPos.y, width, 1, 0xFFFF0000);
+	drawRect(x - width/2 - renderer->camPos.x, y - renderer->camPos.y, value/total * width, 1, 0xFF00FF00);
 }
 
 void buildTurret(int x, int y, InvType type) {
