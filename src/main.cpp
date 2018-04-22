@@ -35,6 +35,7 @@ struct Enemy {
 
 	float hp;
 	float maxHp;
+	float attackTime;
 };
 
 struct Spawner {
@@ -469,12 +470,7 @@ void update() {
 
 			Point enemyCenter = {enemy->x + enemy->tex->width/2, enemy->y + enemy->tex->height/2};
 
-			float idleLimit;
-			float moveSpeed;
-			float chaseSpeed;
-			float moveDistMin;
-			float moveDistMax;
-			float aggroRange;
+			float idleLimit, moveSpeed, chaseSpeed, moveDistMin, moveDistMax, aggroRange, attackRate, attackDamage;
 			if (enemy->type == ENEMY_BAT) {
 				idleLimit = 3;
 				moveSpeed = 1;
@@ -482,6 +478,8 @@ void update() {
 				moveDistMin = 32;
 				moveDistMax = 96;
 				aggroRange = 96;
+				attackRate = 1;
+				attackDamage = 3;
 			}
 
 			enemy->stateTime += platform->elapsed;
@@ -539,6 +537,15 @@ void update() {
 					float angle = radsBetween(enemyCenter.x, enemyCenter.y, chaseCenter.x, chaseCenter.y);
 					enemy->x += cos(angle) * chaseSpeed;
 					enemy->y += sin(angle) * chaseSpeed;
+				}
+			}
+
+			if (enemy->state == STATE_ATTACKING) {
+				enemy->attackTime += platform->elapsed;
+				if (enemy->attackTime > attackRate) {
+					if (enemy->chasingPlayer) player->hp -= attackDamage;
+					if (enemy->targetTurret) enemy->targetTurret->hp -= attackDamage;
+					enemy->attackTime = 0;
 				}
 			}
 		}
