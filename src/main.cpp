@@ -1,5 +1,6 @@
 /*
 TODO:
+Make diagonal movement not OP
 */
 #include "platform.h"
 #include "renderer.h"
@@ -52,12 +53,12 @@ struct Spawner {
 
 struct Turret {
 	bool exists;
-	TurretType type;
-	Texture *baseTex;
-	Texture *gunTex;
-	float gunRotation;
 	int x;
 	int y;
+	TurretType type;
+	float gunRotation;
+	Texture *baseTex;
+	Texture *gunTex;
 
 	float hp;
 	float maxHp;
@@ -127,6 +128,7 @@ Turret *isRectOverTurret(Rect *rect);
 Turret *isPointOverTurret(float px, float py);
 bool isPointOverColl(float px, float py);
 Turret *getClosestTurret(float px, float py);
+Enemy *getClosestEnemy(float px, float py);
 
 void drawHpBar(float x, float y, float value, float total);
 
@@ -558,6 +560,36 @@ void update() {
 
 	}
 
+	{ /// Turrets
+		for (int i = 0; i < TURRETS_MAX; i++) {
+			Turret *turret = &game->turrets[i];
+			if (turret->exists) {
+				Point turretCenter = {turret->x + turret->baseTex->width/2.0f, turret->y + turret->baseTex->height/2.0f};
+
+				float turretRange;
+
+				if (turret->type == TURRET_BASIC) {
+					turretRange = 320;
+				}
+
+				Enemy *closestEnemy = getClosestEnemy(turretCenter.x, turretCenter.y);
+				float enemyDist = 999999;
+
+				Point enemyCenter = {};
+				if (closestEnemy) {
+					enemyCenter.setTo(closestEnemy->x + closestEnemy->tex->width/2, closestEnemy->y + closestEnemy->tex->height/2);
+					enemyDist = distanceBetween(turretCenter.x, turretCenter.y, enemyCenter.x, enemyCenter.y);
+				}
+
+				if (enemyDist < turretRange) {
+					turret->gunRotation = toDeg(radsBetween(turretCenter.x, turretCenter.y, enemyCenter.x, enemyCenter.y));
+				}
+
+				if (turret->hp <= 0) turret->exists = false;
+			}
+		}
+	}
+
 	{ /// Hud
 		drawText(game->frameTimeText, game->mainFont, "Frame time: %d", platform->frameTime);
 	}
@@ -798,6 +830,24 @@ Turret *getClosestTurret(float px, float py) {
 			if (curDist < dist || closest == NULL) {
 				dist = curDist;
 				closest = turret;
+			}
+		}
+	}
+
+	return closest;
+}
+
+Enemy *getClosestEnemy(float px, float py) {
+	Enemy *closest = NULL;
+	float dist = 0;
+
+	for (int i = 0; i < TURRETS_MAX; i++) {
+		Enemy *enemy = &game->enemies[i];
+		if (enemy->exists) {
+			float curDist = distanceBetween(px, py, enemy->x + enemy->tex->width/2, enemy->y + enemy->tex->height/2);
+			if (curDist < dist || closest == NULL) {
+				dist = curDist;
+				closest = enemy;
 			}
 		}
 	}

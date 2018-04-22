@@ -417,7 +417,7 @@ void drawSpriteEx(SpriteDef *def) {
 	matrix.translate(def->pos.x - camOff.x, def->pos.y - camOff.y);
 
 	matrix.translate(def->pivot.x, def->pivot.y);
-	matrix.rotate(def->rotation);
+	matrix.rotate(-def->rotation);
 	matrix.translate(-def->pivot.x, -def->pivot.y);
 
 	glUniformMatrix3fv(renderer->spriteProgram.u_matrix, 1, false, (float *)matrix.data);
