@@ -42,6 +42,10 @@ float toDeg(float rads) {
 	return rads * 57.2958;
 }
 
+float toRad(float degs) {
+	return degs * 0.0174533;
+}
+
 void Rect::setTo(float x, float y, float width, float height) {
 	this->x = x;
 	this->y = y;

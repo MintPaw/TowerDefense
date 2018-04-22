@@ -10,14 +10,26 @@ Make diagonal movement not OP
 #define SPAWNERS_MAX 1024
 #define ENEMY_MAX 8192
 #define ENEMIES_PER_SPAWNER_MAX 256
+#define BULLETS_MAX 2048
 
 enum TurretType { TURRET_BASIC };
 enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
 enum SpawnerType { SPAWNER_BATS };
 enum EnemyType { ENEMY_BAT };
 enum EnemyState { STATE_IDLE=0, STATE_MOVING, STATE_CHASING, STATE_ATTACKING };
+enum BulletType { BULLET_BASIC };
 
 struct Turret;
+
+struct Bullet {
+	bool exists;
+	float x;
+	float y;
+	float rotation;
+	float damage;
+	BulletType type;
+	Texture *tex;
+};
 
 struct Enemy {
 	bool exists;
@@ -62,6 +74,7 @@ struct Turret {
 
 	float hp;
 	float maxHp;
+	float attackTime;
 };
 
 // struct Frame {
@@ -86,13 +99,18 @@ struct Player {
 
 struct Game {
 	Texture *tilesetTexture;
+
 	Texture *basicTurretBaseTexture;
 	Texture *basicTurretGunTexture;
+
 	Texture *upgradeOption1Texture;
 	Texture *upgradeOption2Texture;
 	Texture *upgradeOption3Texture;
 	Texture *disassembleOptionTexture;
+
 	Texture *enemyBatTexture;
+
+	Texture *bulletBasicTexture;
 
 	BitmapFont *mainFont;
 
@@ -116,6 +134,7 @@ struct Game {
 	Rect colls[COLLS_MAX];
 	Spawner spawners[SPAWNERS_MAX];
 	Enemy enemies[ENEMY_MAX];
+	Bullet bullets[BULLETS_MAX];
 };
 
 void update();
@@ -129,6 +148,8 @@ Turret *isPointOverTurret(float px, float py);
 bool isPointOverColl(float px, float py);
 Turret *getClosestTurret(float px, float py);
 Enemy *getClosestEnemy(float px, float py);
+
+Bullet *shootBullet(float x, float y, BulletType type, float degrees, float startDist);
 
 void drawHpBar(float x, float y, float value, float total);
 
@@ -174,6 +195,8 @@ void update() {
 		game->basicTurretGunTexture = uploadPngTexturePath("assets/sprites/basicTurretGun.png");
 
 		game->enemyBatTexture = uploadPngTexturePath("assets/sprites/enemyBat.png");
+
+		game->bulletBasicTexture = uploadPngTexturePath("assets/sprites/bulletBasic.png");
 
 		game->mainFont = loadBitmapFontPath("assets/fonts/OpenSans-Regular_22.fnt");
 
@@ -556,6 +579,8 @@ void update() {
 					enemy->attackTime = 0;
 				}
 			}
+			
+			if (enemy->hp <= 0) enemy->exists = false;
 		}
 
 	}
@@ -566,10 +591,11 @@ void update() {
 			if (turret->exists) {
 				Point turretCenter = {turret->x + turret->baseTex->width/2.0f, turret->y + turret->baseTex->height/2.0f};
 
-				float turretRange;
-
+				float turretRange, turretRate, turretDamage;
 				if (turret->type == TURRET_BASIC) {
 					turretRange = 320;
+					turretRate = 1;
+					turretDamage = 5;
 				}
 
 				Enemy *closestEnemy = getClosestEnemy(turretCenter.x, turretCenter.y);
@@ -583,9 +609,47 @@ void update() {
 
 				if (enemyDist < turretRange) {
 					turret->gunRotation = toDeg(radsBetween(turretCenter.x, turretCenter.y, enemyCenter.x, enemyCenter.y));
+
+					turret->attackTime += platform->elapsed;
+					if (turret->attackTime > turretRate) {
+						Bullet *bullet = shootBullet(turretCenter.x, turretCenter.y, BULLET_BASIC, turret->gunRotation, turret->gunTex->width);
+						bullet->damage = turretDamage;
+						turret->attackTime = 0;
+					}
 				}
 
 				if (turret->hp <= 0) turret->exists = false;
+			}
+		}
+	}
+
+	{ /// Bullets
+		for (int i = 0; i < BULLETS_MAX; i++) {
+			Bullet *bullet = &game->bullets[i];
+			if (bullet->exists) {
+
+				float bulletSpeed;
+
+				if (bullet->type == BULLET_BASIC) {
+					bulletSpeed = 5;
+				}
+
+				bullet->x += cos(toRad(bullet->rotation)) * bulletSpeed;
+				bullet->y += sin(toRad(bullet->rotation)) * bulletSpeed;
+
+				Rect bulletRect = {bullet->x, bullet->y, (float)bullet->tex->width, (float)bullet->tex->height};
+
+				for (int i = 0; i < ENEMY_MAX; i++) {
+					Enemy *enemy = &game->enemies[i];
+					if (enemy->exists) {
+						Rect enemyRect = {enemy->x, enemy->y, (float)enemy->tex->width, (float)enemy->tex->height};
+
+						if (bulletRect.intersects(&enemyRect)) {
+							bullet->exists = false;
+							enemy->hp -= bullet->damage;
+						}
+					}
+				}
 			}
 		}
 	}
@@ -675,6 +739,20 @@ void update() {
 					def.tint = 0x88FF0000;
 				}
 
+				drawSpriteEx(&def);
+			}
+		}
+	}
+
+	{ /// Draw bullets
+		for (int i = 0; i < BULLETS_MAX; i++) {
+			Bullet *bullet = &game->bullets[i];
+			if (bullet->exists) {
+				defaultSpriteDef(&def);
+				def.tex = bullet->tex;
+				def.pos.x = bullet->x;
+				def.pos.y = bullet->y;
+				def.rotation = bullet->rotation;
 				drawSpriteEx(&def);
 			}
 		}
@@ -853,6 +931,29 @@ Enemy *getClosestEnemy(float px, float py) {
 	}
 
 	return closest;
+}
+
+Bullet *shootBullet(float x, float y, BulletType type, float degrees, float startDist) {
+	for (int i = 0; i < BULLETS_MAX; i++) {
+		Bullet *bullet = &game->bullets[i];
+		if (!bullet->exists) {
+			memset(bullet, 0, sizeof(Bullet));
+			bullet->exists = true;
+			bullet->type = type;
+			bullet->rotation = degrees;
+
+			if (type == BULLET_BASIC) {
+				bullet->tex = game->bulletBasicTexture;
+			}
+
+			bullet->x = x + cos(toRad(degrees)) * startDist;
+			bullet->y = y + sin(toRad(degrees)) * startDist;
+
+			return bullet;
+		}
+	}
+
+	return NULL;
 }
 
 bool getKeyPressed(int key) {

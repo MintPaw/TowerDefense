@@ -15,6 +15,7 @@ bool rndBool();
 float distanceBetween(float x1, float y1, float x2, float y2);
 float radsBetween(float x1, float y1, float x2, float y2);
 float toDeg(float rads);
+float toRad(float degs);
 
 struct Rect {
 	float x;
