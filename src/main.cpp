@@ -90,6 +90,7 @@ struct Turret {
 	float hp;
 	float maxHp;
 	float attackTime;
+	int invested;
 };
 
 // struct Frame {
@@ -161,7 +162,7 @@ struct Game {
 
 void update();
 bool getKeyPressed(int key);
-void buildTurret(int x, int y, InvType type);
+Turret *buildTurret(int x, int y, InvType type);
 
 Enemy *spawnEnemy(float x, float y, EnemyType type);
 
@@ -485,6 +486,7 @@ void update() {
 				} else if (up2.containsPoint(worldMouse.x, worldMouse.y)) {
 				} else if (up3.containsPoint(worldMouse.x, worldMouse.y)) {
 				} else if (disass.containsPoint(worldMouse.x, worldMouse.y)) {
+					game->gold += game->selectedTurret->invested;
 					game->selectedTurret->exists = false;
 					game->selectedTurret = NULL;
 				} else {
@@ -494,7 +496,8 @@ void update() {
 
 			if (game->currentInv == INV_TURRET_BASIC) {
 				if (selecterValid) {
-					buildTurret(selecterPos.x, selecterPos.y, INV_TURRET_BASIC);
+					Turret *turret = buildTurret(selecterPos.x, selecterPos.y, INV_TURRET_BASIC);
+					turret->invested = turretPrice;
 					game->gold -= turretPrice;
 				}
 			} else if (game->currentInv == INV_HANDS) {
@@ -900,7 +903,7 @@ void drawHpBar(float x, float y, float value, float total) {
 	drawRect(x - width/2 - renderer->camPos.x, y - renderer->camPos.y, value/total * width, 1, 0xFF00FF00);
 }
 
-void buildTurret(int x, int y, InvType type) {
+Turret *buildTurret(int x, int y, InvType type) {
 	Turret *turret = NULL;
 
 	for (int i = 0; i < TURRETS_MAX; i++) {
@@ -921,6 +924,8 @@ void buildTurret(int x, int y, InvType type) {
 
 		turret->maxHp = turret->hp = 100;
 	}
+
+	return turret;
 }
 
 Enemy *spawnEnemy(float x, float y, EnemyType type) {
