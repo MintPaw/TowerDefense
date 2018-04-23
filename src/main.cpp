@@ -644,7 +644,7 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nC
 
 					turret->attackTime += platform->elapsed;
 					if (turret->attackTime > turretRate) {
-						Bullet *bullet = shootBullet(turretCenter.x, turretCenter.y, BULLET_BASIC, turret->gunRotation, turret->gunTex->width);
+						Bullet *bullet = shootBullet(turretCenter.x, turretCenter.y, BULLET_BASIC, turret->gunRotation, 0);
 						bullet->damage = turretDamage;
 						turret->attackTime = 0;
 					}
