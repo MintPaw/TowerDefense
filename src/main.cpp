@@ -1,7 +1,6 @@
 /*
 			TODO:
 			Make gold texture and untint
-			Make sure bullets are firing directly out of turrets
 			*/
 #include "platform.h"
 #include "renderer.h"
@@ -656,7 +655,7 @@ void update() {
 		for (int i = 0; i < TURRETS_MAX; i++) {
 			Turret *turret = &game->turrets[i];
 			if (!turret->exists) continue;
-			Point turretCenter = {turret->x + turret->baseTex->width/2.0f, turret->y + turret->baseTex->height/2.0f};
+			Point turretCenter = {turret->x + (float)turret->baseTex->width/2, turret->y + (float)turret->baseTex->height/2};
 
 			float turretRange, turretRate, turretDamage;
 			if (turret->type == TURRET_BASIC) {
@@ -743,8 +742,8 @@ void update() {
 
 	/// Section: Render
 	clearRenderer();
-
 	SpriteDef def;
+
 	{ /// Draw map
 		defaultSpriteDef(&def);
 		def.tex = game->mapTexture;
@@ -845,6 +844,8 @@ void update() {
 			def.tex = bullet->tex;
 			def.pos.x = bullet->x;
 			def.pos.y = bullet->y;
+			def.pivot.x = bullet->tex->width/2;
+			def.pivot.y = bullet->tex->height/2;
 			def.rotation = bullet->rotation;
 			drawSpriteEx(&def);
 		}
@@ -1041,6 +1042,8 @@ Bullet *shootBullet(float x, float y, BulletType type, float degrees, float star
 			bullet->tex = game->bulletBasicTexture;
 		}
 
+		x -= bullet->tex->width/2;
+		y -= bullet->tex->height/2;
 		bullet->x = x + cos(toRad(degrees)) * startDist;
 		bullet->y = y + sin(toRad(degrees)) * startDist;
 
