@@ -127,6 +127,7 @@ struct Game {
 	Texture *goldTexture;
 
 	BitmapFont *mainFont;
+	BitmapFont *smallFont;
 
 	Player player;
 
@@ -152,6 +153,7 @@ struct Game {
 	Item items[ITEMS_MAX];
 
 	int gold;
+	Texture *goldText;
 };
 
 void update();
@@ -219,8 +221,11 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nC
 			game->goldTexture = uploadPngTexturePath("assets/sprites/bulletBasic.png");
 
 			game->mainFont = loadBitmapFontPath("assets/fonts/OpenSans-Regular_22.fnt");
+			game->smallFont = loadBitmapFontPath("assets/fonts/OpenSans-Regular_16.fnt");
 
 			game->frameTimeText = uploadTexture(NULL, 512, 256);
+
+			game->goldText = uploadTexture(NULL, 512, 256);
 
 			{ /// Setup map
 				void *mapData;
@@ -692,7 +697,8 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nC
 		}
 
 		{ /// Hud
-			drawText(game->frameTimeText, game->mainFont, "Frame time: %d", platform->frameTime);
+			drawText(game->frameTimeText, game->smallFont, "Frame time: %d", platform->frameTime);
+			drawText(game->goldText, game->mainFont, "Gold: %d", game->gold);
 		}
 
 		/// Section: Render
@@ -824,6 +830,11 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nC
 		{ /// Draw hud
 			defaultSpriteDef(&def);
 			def.tex = game->frameTimeText;
+			def.scrollFactor.setTo(0, 0);
+			drawSpriteEx(&def);
+
+			defaultSpriteDef(&def);
+			def.tex = game->goldText;
 			def.scrollFactor.setTo(0, 0);
 			drawSpriteEx(&def);
 		}
