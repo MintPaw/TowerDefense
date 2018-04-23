@@ -1,12 +1,11 @@
 #include "profile.h"
 
-void initProfiler(Profiler *profiler) {
+void initProfiler(Profiler *profilerInstance) {
+	profiler = profilerInstance;
 	memset(profiler, 0, sizeof(Profiler));
 }
 
 void Profiler::reset() {
-	Profiler *profiler = this;
-
 	for (int i = 0; i < profiler->profilesNum; i++) {
 		Profile *prof = &profiler->profiles[i];
 		free(prof->name);
@@ -17,18 +16,25 @@ void Profiler::reset() {
 }
 
 void Profiler::startProfile(const char *name) {
-	Profiler *profiler = this;
-
 	NanoTime time;
 
-	Profile *prof = &profiler->profiles[profiler->profilesNum++];
+	Profile *prof = NULL;
+	for (int i = 0; i < profiler->profilesNum; i++) {
+		Profile *curProf = &profiler->profiles[i];
+		if (streq(name, curProf->name)) {
+			prof = curProf;
+			free(prof->name);
+			memset(prof, 0, sizeof(Profile));
+		}
+	}
+
+	if (!prof) prof = &profiler->profiles[profiler->profilesNum++];
+
 	prof->name = stringClone(name);
 	getNanoTime(&prof->startTime);
 }
 
 void Profiler::endProfile(const char *name) {
-	Profiler *profiler = this;
-
 	Profile *prof;
 	for (int i = 0; i < profiler->profilesNum; i++) {
 		Profile *curProf = &profiler->profiles[i];
@@ -42,8 +48,6 @@ void Profiler::endProfile(const char *name) {
 }
 
 float Profiler::getMsResult(const char *name) {
-	Profiler *profiler = this;
-
 	NanoTime time;
 	profiler->getResult(name, &time);
 
@@ -52,8 +56,6 @@ float Profiler::getMsResult(const char *name) {
 }
 
 void Profiler::getResult(const char *name, NanoTime *time) {
-	Profiler *profiler = this;
-
 	for (int i = 0; i < profiler->profilesNum; i++) {
 		Profile *prof = &profiler->profiles[i];
 		if (streq(name, prof->name)) {
@@ -69,8 +71,6 @@ void Profiler::getResult(const char *name, NanoTime *time) {
 }
 
 void Profiler::printAll() {
-	Profiler *profiler = this;
-
 	for (int i = 0; i < profiler->profilesNum; i++) {
 		Profile *prof = &profiler->profiles[i];
 		printf("Profile: %s\nStart: %d, %d\n", prof->name, prof->startTime.seconds, prof->startTime.nanos);

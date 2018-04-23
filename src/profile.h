@@ -20,3 +20,7 @@ struct Profiler {
 	void getResult(const char *name, NanoTime *time);
 	void printAll();
 };
+
+Profiler *profiler;
+
+void initProfiler(Profiler *profilerInstance);

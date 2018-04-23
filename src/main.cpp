@@ -230,7 +230,7 @@ void update() {
 		game->mainFont = loadBitmapFontPath("assets/fonts/OpenSans-Regular_22.fnt");
 		game->smallFont = loadBitmapFontPath("assets/fonts/OpenSans-Regular_16.fnt");
 
-		game->debugText = uploadTexture(NULL, 512, 256);
+		game->debugText = uploadTexture(NULL, 1024, 256);
 
 		game->goldText = uploadTexture(NULL, 512, 256);
 
@@ -351,12 +351,35 @@ void update() {
 	}
 
 	/// Section: Update
-	Profiler *profiler = &game->profiler;
+	profiler->startProfile("Update Profiler");
 	float updateMs;
 	float renderMs;
+
+	float updateInv;
+	float updateMovement;
+	float updateSelecter;
+	float updateSpawners;
+	float updateEnemies;
+	float updateTurrets;
+	float updateBullets;
+	float updateItems;
+	float updateHud;
+	float updateProfiler;
 	{ /// Profiler
 		updateMs = profiler->getMsResult("Update");
 		renderMs = profiler->getMsResult("Render");
+		updateInv = profiler->getMsResult("Update Inventory");
+		updateMovement = profiler->getMsResult("Update Movement");
+		updateSelecter = profiler->getMsResult("Update Selecter");
+		updateSpawners = profiler->getMsResult("Update Spawners");
+		updateEnemies = profiler->getMsResult("Update Enemies");
+		updateTurrets = profiler->getMsResult("Update Turrets");
+		updateBullets = profiler->getMsResult("Update Bullets");
+		updateItems = profiler->getMsResult("Update Items");
+		updateHud = profiler->getMsResult("Update Hud");
+
+		profiler->endProfile("Update Profiler");
+		updateProfiler = profiler->getMsResult("Update Profiler");
 		profiler->reset();
 	}
 
@@ -385,6 +408,7 @@ void update() {
 		if (platform->keys['='] == KEY_JUST_PRESSED) platform->timeScale *= 2.0;
 	}
 
+	profiler->startProfile("Update Inventory");
 	{ /// Inventory
 		InvType newInv = game->currentInv;
 		if (invLeft) newInv = (InvType)(game->currentInv + 1);
@@ -405,7 +429,9 @@ void update() {
 			if (selecterSize.x == 3 && selecterSize.y == 3) game->selecterTexture = uploadPngTexturePath("assets/sprites/3x3selecter.png");
 		}
 	}
+	profiler->endProfile("Update Inventory");
 
+	profiler->startProfile("Update Movement");
 	{ /// Movement
 		Point playerMovePoint = {};
 		if (moveUp) playerMovePoint.y = -1;
@@ -430,12 +456,14 @@ void update() {
 		if (canMoveX) player->x += playerMovePoint.x;
 		if (canMoveY) player->y += playerMovePoint.y;
 	}
+	profiler->endProfile("Update Movement");
 
 	{ /// Camera
 		setCameraExtents(0, 0, game->mapTexture->width, game->mapTexture->height);
 		setCameraPosition(player->x - platform->windowWidth/2 + game->player.tex->width/2, player->y - platform->windowHeight/2 + game->player.tex->height/2);
 	}
 
+	profiler->startProfile("Update Selecter");
 	Point selecterPos;
 	bool selecterValid = true;
 	SpriteDef upgradeOption1;
@@ -525,9 +553,10 @@ void update() {
 				}
 			}
 		}
-
 	}
+	profiler->endProfile("Update Selecter");
 
+	profiler->startProfile("Update Spawners");
 	{ /// Spawners
 		for (int i = 0; i < SPAWNERS_MAX; i++) {
 			Spawner *spawner = &game->spawners[i];
@@ -551,7 +580,9 @@ void update() {
 			}
 		}
 	}
+	profiler->endProfile("Update Spawners");
 
+	profiler->startProfile("Update Enemies");
 	{ /// Enemies
 		for (int i = 0; i < ENEMY_MAX; i++) {
 			Enemy *enemy = &game->enemies[i];
@@ -667,7 +698,9 @@ void update() {
 			}
 		}
 	}
+	profiler->endProfile("Update Enemies");
 
+	profiler->startProfile("Update Turrets");
 	{ /// Turrets
 		for (int i = 0; i < TURRETS_MAX; i++) {
 			Turret *turret = &game->turrets[i];
@@ -705,7 +738,9 @@ void update() {
 			if (turret->hp <= 0) turret->exists = false;
 		}
 	}
+	profiler->endProfile("Update Turrets");
 
+	profiler->startProfile("Update Bullets");
 	{ /// Bullets
 		for (int i = 0; i < BULLETS_MAX; i++) {
 			Bullet *bullet = &game->bullets[i];
@@ -737,7 +772,9 @@ void update() {
 			}
 		}
 	}
+	profiler->endProfile("Update Bullets");
 
+	profiler->startProfile("Update Items");
 	{ /// Items
 		for (int i = 0; i < ITEMS_MAX; i++) {
 			Item *item = &game->items[i];
@@ -750,18 +787,27 @@ void update() {
 			}
 		}
 	}
+	profiler->endProfile("Update Items");
 
+	profiler->startProfile("Update Hud");
 	TextProps goldTextProps;
 	{ /// Hud
 		drawText(
 			game->debugText,
 			game->smallFont,
-			"Frame time: %d\nUpdate: %0.4f\nRender: %0.4f\nTime scale: %0.2f\n",
+			"Frame time: %d\n"
+			"Update: %0.2f Render: %0.2f\n"
+			"Inv: %0.2f Move: %0.2f Sele: %0.2f Spawn: %0.2f Ene: %0.2f Tur: %0.2f Bul: %0.2f Item: %0.2f Hud: %0.2f Prof: %0.2f\n"
+			"Time scale: %0.2f\n",
 			NULL,
-			platform->frameTime, updateMs, renderMs, platform->timeScale);
+			platform->frameTime,
+			updateMs, renderMs,
+			updateInv, updateMovement, updateSelecter, updateSpawners, updateEnemies, updateTurrets, updateBullets, updateItems, updateHud, updateProfiler,
+			platform->timeScale);
 
 		drawText(game->goldText, game->mainFont, "Gold: %d", &goldTextProps, game->gold);
 	}
+	profiler->endProfile("Update Hud");
 
 	profiler->endProfile("Update");
 
