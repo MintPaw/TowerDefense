@@ -366,22 +366,28 @@ void update() {
 	float updateHud;
 	float updateProfiler;
 	{ /// Profiler
-		updateMs = profiler->getMsResult("Update");
-		renderMs = profiler->getMsResult("Render");
-		updateInv = profiler->getMsResult("Update Inventory");
-		updateMovement = profiler->getMsResult("Update Movement");
-		updateSelecter = profiler->getMsResult("Update Selecter");
-		updateSpawners = profiler->getMsResult("Update Spawners");
-		updateEnemies = profiler->getMsResult("Update Enemies");
-		updateTurrets = profiler->getMsResult("Update Turrets");
-		updateBullets = profiler->getMsResult("Update Bullets");
-		updateItems = profiler->getMsResult("Update Items");
-		updateHud = profiler->getMsResult("Update Hud");
+		updateMs = profiler->getAverage("Update");
+		renderMs = profiler->getAverage("Render");
+		updateInv = profiler->getAverage("Update Inventory");
+		updateMovement = profiler->getAverage("Update Movement");
+		updateSelecter = profiler->getAverage("Update Selecter");
+		updateSpawners = profiler->getAverage("Update Spawners");
+		updateEnemies = profiler->getAverage("Update Enemies");
+		updateTurrets = profiler->getAverage("Update Turrets");
+		updateBullets = profiler->getAverage("Update Bullets");
+		updateItems = profiler->getAverage("Update Items");
+		updateHud = profiler->getAverage("Update Hud");
 
 		profiler->endProfile("Update Profiler");
-		updateProfiler = profiler->getMsResult("Update Profiler");
-		profiler->reset();
+		updateProfiler = profiler->getAverage("Update Profiler");
 	}
+
+	// Profile *prof = &profiler->profiles[10];
+	// printf("Last ms's for %s: ", prof->name);
+	// for (int i = 0; i < PROFILER_AVERAGE_FRAMES; i++) {
+	// 	printf("%0.2f, ", prof->pastMs[i]);
+	// }
+	// printf("\n");
 
 	profiler->startProfile("Update");
 
@@ -792,18 +798,20 @@ void update() {
 	profiler->startProfile("Update Hud");
 	TextProps goldTextProps;
 	{ /// Hud
-		drawText(
-			game->debugText,
-			game->smallFont,
-			"Frame time: %d\n"
-			"Update: %0.2f Render: %0.2f\n"
-			"Inv: %0.2f Move: %0.2f Sele: %0.2f Spawn: %0.2f Ene: %0.2f Tur: %0.2f Bul: %0.2f Item: %0.2f Hud: %0.2f Prof: %0.2f\n"
-			"Time scale: %0.2f\n",
-			NULL,
-			platform->frameTime,
-			updateMs, renderMs,
-			updateInv, updateMovement, updateSelecter, updateSpawners, updateEnemies, updateTurrets, updateBullets, updateItems, updateHud, updateProfiler,
-			platform->timeScale);
+		if (platform->frameCount % PROFILER_AVERAGE_FRAMES == 0) {
+			drawText(
+				game->debugText,
+				game->smallFont,
+				"Frame time: %d\n"
+				"Update: %0.2f Render: %0.2f\n"
+				"Inv: %0.2f Move: %0.2f Sele: %0.2f Spawn: %0.2f Ene: %0.2f Tur: %0.2f Bul: %0.2f Item: %0.2f Hud: %0.2f Prof: %0.2f\n"
+				"Time scale: %0.2f\n",
+				NULL,
+				platform->frameTime,
+				updateMs, renderMs,
+				updateInv, updateMovement, updateSelecter, updateSpawners, updateEnemies, updateTurrets, updateBullets, updateItems, updateHud, updateProfiler,
+				platform->timeScale);
+		}
 
 		drawText(game->goldText, game->mainFont, "Gold: %d", &goldTextProps, game->gold);
 	}

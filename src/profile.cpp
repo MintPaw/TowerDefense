@@ -5,16 +5,6 @@ void initProfiler(Profiler *profilerInstance) {
 	memset(profiler, 0, sizeof(Profiler));
 }
 
-void Profiler::reset() {
-	for (int i = 0; i < profiler->profilesNum; i++) {
-		Profile *prof = &profiler->profiles[i];
-		free(prof->name);
-		memset(prof, 0, sizeof(Profile));
-	}
-
-	profiler->profilesNum = 0;
-}
-
 void Profiler::startProfile(const char *name) {
 	NanoTime time;
 
@@ -23,14 +13,17 @@ void Profiler::startProfile(const char *name) {
 		Profile *curProf = &profiler->profiles[i];
 		if (streq(name, curProf->name)) {
 			prof = curProf;
-			free(prof->name);
-			memset(prof, 0, sizeof(Profile));
+
+			for (int j = PROFILER_AVERAGE_FRAMES-1; j > 0; j--) prof->pastMs[j] = prof->pastMs[j-1];
+			prof->pastMs[0] = profiler->getMsResult(name);
 		}
 	}
 
-	if (!prof) prof = &profiler->profiles[profiler->profilesNum++];
+	if (!prof) {
+		prof = &profiler->profiles[profiler->profilesNum++];
+		prof->name = stringClone(name);
+	}
 
-	prof->name = stringClone(name);
 	getNanoTime(&prof->startTime);
 }
 
@@ -45,6 +38,24 @@ void Profiler::endProfile(const char *name) {
 	}
 
 	getNanoTime(&prof->endTime);
+}
+
+float Profiler::getAverage(const char *name) {
+	Profile *prof = NULL;
+	for (int i = 0; i < profiler->profilesNum; i++) {
+		Profile *curProf = &profiler->profiles[i];
+		if (streq(name, curProf->name)) {
+			prof = curProf;
+			break;
+		}
+	}
+
+	if (!prof) return 0;
+
+	float sum = 0;
+	for (int i = 0; i < PROFILER_AVERAGE_FRAMES; i++) sum += prof->pastMs[i];
+	sum /= PROFILER_AVERAGE_FRAMES;
+	return sum;
 }
 
 float Profiler::getMsResult(const char *name) {
