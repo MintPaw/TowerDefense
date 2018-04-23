@@ -663,7 +663,11 @@ void setTexture(GLuint texture, int slot) {
 
 void setFramebuffer(GLuint framebuffer) {
 	if (renderer->currentFramebuffer == framebuffer) return;
-	renderer->currentFramebufferTexture = -1; // I think this is required
+
+	// I think these are required
+	renderer->currentFramebufferTexture = -1;
+	renderer->currentTexture = -1;
+
 	renderer->currentFramebuffer = framebuffer;
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 	CheckGlError();
