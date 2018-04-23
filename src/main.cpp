@@ -1,6 +1,8 @@
 /*
 TODO:
 Make diagonal movement not OP
+Make gold texture and untint
+Make sure bullets are firing directly out of turrets
 */
 #include "platform.h"
 #include "renderer.h"
@@ -11,6 +13,7 @@ Make diagonal movement not OP
 #define ENEMY_MAX 8192
 #define ENEMIES_PER_SPAWNER_MAX 256
 #define BULLETS_MAX 2048
+#define ITEMS_MAX 2048
 
 enum TurretType { TURRET_BASIC };
 enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
@@ -18,8 +21,17 @@ enum SpawnerType { SPAWNER_BATS };
 enum EnemyType { ENEMY_BAT };
 enum EnemyState { STATE_IDLE=0, STATE_MOVING, STATE_CHASING, STATE_ATTACKING };
 enum BulletType { BULLET_BASIC };
+enum ItemType { ITEM_GOLD };
 
 struct Turret;
+
+struct Item {
+	bool exists;
+	float x;
+	float y;
+	float type;
+	Texture *tex;
+};
 
 struct Bullet {
 	bool exists;
@@ -112,6 +124,8 @@ struct Game {
 
 	Texture *bulletBasicTexture;
 
+	Texture *goldTexture;
+
 	BitmapFont *mainFont;
 
 	Player player;
@@ -135,6 +149,9 @@ struct Game {
 	Spawner spawners[SPAWNERS_MAX];
 	Enemy enemies[ENEMY_MAX];
 	Bullet bullets[BULLETS_MAX];
+	Item items[ITEMS_MAX];
+
+	int gold;
 };
 
 void update();
@@ -150,6 +167,7 @@ Turret *getClosestTurret(float px, float py);
 Enemy *getClosestEnemy(float px, float py);
 
 Bullet *shootBullet(float x, float y, BulletType type, float degrees, float startDist);
+Item *createItem(float x, float y, ItemType type);
 
 void drawHpBar(float x, float y, float value, float total);
 
@@ -197,6 +215,8 @@ void update() {
 		game->enemyBatTexture = uploadPngTexturePath("assets/sprites/enemyBat.png");
 
 		game->bulletBasicTexture = uploadPngTexturePath("assets/sprites/bulletBasic.png");
+
+		game->goldTexture = uploadPngTexturePath("assets/sprites/bulletBasic.png");
 
 		game->mainFont = loadBitmapFontPath("assets/fonts/OpenSans-Regular_22.fnt");
 
@@ -321,7 +341,9 @@ void update() {
 
 	/// Section: Update
 	Player *player = &game->player;
-	Point playerCenter = {player->x + game->player.tex->width/2, player->y + game->player.tex->height * 0.90f};
+	Point playerCenter = {player->x + player->tex->width/2, player->y + player->tex->height * 0.90f};
+	Rect playerRect = {player->x, player->y, (float)player->tex->width, (float)player->tex->height};
+
 	bool moveUp = false;
 	bool moveDown = false;
 	bool moveLeft = false;
@@ -494,8 +516,9 @@ void update() {
 			if (!enemy->exists) continue;
 
 			Point enemyCenter = {enemy->x + enemy->tex->width/2, enemy->y + enemy->tex->height/2};
+			Rect enemyRect = {enemy->x, enemy->y, (float)enemy->tex->width, (float)enemy->tex->height};
 
-			float idleLimit, moveSpeed, chaseSpeed, moveDistMin, moveDistMax, aggroRange, attackRate, attackDamage;
+			float idleLimit, moveSpeed, chaseSpeed, moveDistMin, moveDistMax, aggroRange, attackRate, attackDamage, goldGiven;
 			if (enemy->type == ENEMY_BAT) {
 				idleLimit = 3;
 				moveSpeed = 1;
@@ -505,6 +528,7 @@ void update() {
 				aggroRange = 96;
 				attackRate = 1;
 				attackDamage = 3;
+				goldGiven = 10;
 			}
 
 			enemy->stateTime += platform->elapsed;
@@ -556,7 +580,6 @@ void update() {
 
 			if (targetInRange) {
 				enemy->state = STATE_CHASING;
-				Rect enemyRect = {enemy->x, enemy->y, (float)enemy->tex->width, (float)enemy->tex->height};
 				if (enemyRect.intersects(&enemy->chaseRect)) {
 					enemy->state = STATE_ATTACKING;
 				} else {
@@ -579,10 +602,16 @@ void update() {
 					enemy->attackTime = 0;
 				}
 			}
-			
-			if (enemy->hp <= 0) enemy->exists = false;
-		}
 
+			if (enemy->hp <= 0) {
+				for (int goldIndex = 0; goldIndex < goldGiven; goldIndex++) {
+					Point itemPoint;
+					enemyRect.randomPoint(&itemPoint);
+					createItem(itemPoint.x, itemPoint.y, ITEM_GOLD);
+				}
+				enemy->exists = false;
+			}
+		}
 	}
 
 	{ /// Turrets
@@ -654,6 +683,19 @@ void update() {
 		}
 	}
 
+	{ /// Items
+		for (int i = 0; i < ITEMS_MAX; i++) {
+			Item *item = &game->items[i];
+			if (!item->exists) continue;
+
+			Rect itemRect = {item->x, item->y, (float)item->tex->width, (float)item->tex->height}; 
+			if (playerRect.intersects(&itemRect)) {
+				game->gold++;
+				item->exists = false;
+			}
+		}
+	}
+
 	{ /// Hud
 		drawText(game->frameTimeText, game->mainFont, "Frame time: %d", platform->frameTime);
 	}
@@ -691,6 +733,20 @@ void update() {
 				def.pos.y = turret->y + turret->baseTex->height/2 - turret->gunTex->height/2;
 				def.rotation = turret->gunRotation;
 				def.pivot.setTo(turret->gunTex->height/2, turret->gunTex->height/2);
+				drawSpriteEx(&def);
+			}
+		}
+	}
+
+	{ /// Draw items
+		for (int i = 0; i < ITEMS_MAX; i++) {
+			Item *item = &game->items[i];
+			if (item->exists) {
+				defaultSpriteDef(&def);
+				def.tex = item->tex;
+				def.pos.x = item->x;
+				def.pos.y = item->y;
+				def.tint = 0xFFFF00FF;
 				drawSpriteEx(&def);
 			}
 		}
@@ -950,6 +1006,24 @@ Bullet *shootBullet(float x, float y, BulletType type, float degrees, float star
 			bullet->y = y + sin(toRad(degrees)) * startDist;
 
 			return bullet;
+		}
+	}
+
+	return NULL;
+}
+
+Item *createItem(float x, float y, ItemType type) {
+	for (int i = 0; i < ITEMS_MAX; i++) {
+		Item *item = &game->items[i];
+		if (!item->exists) {
+			memset(item, 0, sizeof(Item));
+			item->exists = true;
+			item->type = type;
+			item->x = x;
+			item->y = y;
+			item->tex = game->goldTexture;
+
+			return item;
 		}
 	}
 
