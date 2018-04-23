@@ -36,6 +36,7 @@ struct Platform {
 	int frameTime;
 	float elapsed;
 	float time;
+	float timeScale;
 };
 
 Platform *platform;
@@ -47,7 +48,7 @@ void initPlatform() {
 	memset(platform, 0, sizeof(Platform));
 	platform->windowWidth = 1280;
 	platform->windowHeight = 720;
-	platform->elapsed = 1/60.0;
+	platform->timeScale = 1;
 
 #ifdef _WIN32
 	timeBeginPeriod(1);
@@ -80,6 +81,8 @@ void initPlatform() {
 void platformUpdateLoop(void (*updateCallbcak)()) {
 	platform->running = true;
 	while (platform->running) {
+		platform->elapsed = 1/60.0 * platform->timeScale;
+
 		int startTime = SDL_GetTicks();
 		platform->time += platform->elapsed;
 

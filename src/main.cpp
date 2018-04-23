@@ -147,7 +147,7 @@ struct Game {
 	InvType currentInv;
 	Texture *selecterTexture;
 
-	Texture *frameTimeText;
+	Texture *debugText;
 
 	Rect colls[COLLS_MAX];
 	Spawner spawners[SPAWNERS_MAX];
@@ -203,12 +203,11 @@ void update() {
 		game = (Game *)malloc(sizeof(Game));
 		memset(game, 0, sizeof(Game));
 
-		game->player.tex = uploadPngTexturePath("assets/sprites/player.png");
 		game->player.maxHp = game->player.hp = 100;
-
 		game->currentInv = INV_HANDS;
 		game->gold = 300;
 
+		game->player.tex = uploadPngTexturePath("assets/sprites/player.png");
 		game->tilesetTexture = uploadPngTexturePath("assets/tilesets/tileset.png");
 
 		game->upgradeOption1Texture = uploadPngTexturePath("assets/sprites/upgradeOption1.png");
@@ -228,7 +227,7 @@ void update() {
 		game->mainFont = loadBitmapFontPath("assets/fonts/OpenSans-Regular_22.fnt");
 		game->smallFont = loadBitmapFontPath("assets/fonts/OpenSans-Regular_16.fnt");
 
-		game->frameTimeText = uploadTexture(NULL, 512, 256);
+		game->debugText = uploadTexture(NULL, 512, 256);
 
 		game->goldText = uploadTexture(NULL, 512, 256);
 
@@ -367,6 +366,9 @@ void update() {
 	if (platform->keys['Q'] == KEY_JUST_PRESSED) invLeft = true;
 	if (platform->keys['E'] == KEY_JUST_PRESSED) invRight = true;
 
+	if (platform->keys['-'] == KEY_JUST_PRESSED) platform->timeScale /= 2.0;
+	if (platform->keys['='] == KEY_JUST_PRESSED) platform->timeScale *= 2.0;
+
 	{ /// Inventory
 		InvType newInv = game->currentInv;
 		if (invLeft) newInv = (InvType)(game->currentInv + 1);
@@ -395,7 +397,7 @@ void update() {
 		if (moveLeft) playerMovePoint.x = -1;
 		if (moveRight) playerMovePoint.x = 1;
 
-		float moveSpeed = 3;
+		float moveSpeed = 3 * platform->timeScale;
 		playerMovePoint.normalize(moveSpeed);
 
 		float collX = playerCenter.x + playerMovePoint.x;
@@ -555,6 +557,8 @@ void update() {
 				goldGiven = 10;
 			}
 
+			moveSpeed *= platform->timeScale;
+
 			enemy->stateTime += platform->elapsed;
 			if (enemy->state == STATE_IDLE) {
 				if (enemy->stateTime > idleLimit) {
@@ -697,6 +701,8 @@ void update() {
 				bulletSpeed = 5;
 			}
 
+			bulletSpeed *= platform->timeScale;
+
 			bullet->x += cos(toRad(bullet->rotation)) * bulletSpeed;
 			bullet->y += sin(toRad(bullet->rotation)) * bulletSpeed;
 
@@ -731,7 +737,7 @@ void update() {
 
 	TextProps goldTextProps;
 	{ /// Hud
-		drawText(game->frameTimeText, game->smallFont, "Frame time: %d", NULL, platform->frameTime);
+		drawText(game->debugText, game->smallFont, "Frame time: %d\nTime scale: %0.2f\n", NULL, platform->frameTime, platform->timeScale);
 		drawText(game->goldText, game->mainFont, "Gold: %d", &goldTextProps, game->gold);
 	}
 
@@ -863,7 +869,7 @@ void update() {
 
 	{ /// Draw hud
 		defaultSpriteDef(&def);
-		def.tex = game->frameTimeText;
+		def.tex = game->debugText;
 		def.scrollFactor.setTo(0, 0);
 		drawSpriteEx(&def);
 
