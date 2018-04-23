@@ -188,3 +188,11 @@ void Point::setTo(float x, float y) {
 	this->x = x;
 	this->y = y;
 }
+
+void Point::normalize(float scale) {
+	float norm = sqrt(this->x*this->x + this->y*this->y);
+	if (norm != 0) {
+		this->x = scale * this->x / norm;
+		this->y = scale * this->y / norm;
+	}
+}

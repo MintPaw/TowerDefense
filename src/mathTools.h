@@ -50,4 +50,5 @@ struct Point {
 	float y;
 
 	void setTo(float x=0, float y=0);
+	void normalize(float scale=1);
 };

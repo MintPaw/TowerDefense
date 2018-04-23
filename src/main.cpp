@@ -1,6 +1,5 @@
 /*
 			TODO:
-			Make diagonal movement not OP
 			Make gold texture and untint
 			Make sure bullets are firing directly out of turrets
 			*/
@@ -390,12 +389,14 @@ void update() {
 	}
 
 	{ /// Movement
-		float moveSpeed = 3;
 		Point playerMovePoint = {};
-		if (moveUp) playerMovePoint.y -= moveSpeed;
-		if (moveDown) playerMovePoint.y += moveSpeed;
-		if (moveLeft) playerMovePoint.x -= moveSpeed;
-		if (moveRight) playerMovePoint.x += moveSpeed;
+		if (moveUp) playerMovePoint.y = -1;
+		if (moveDown) playerMovePoint.y = 1;
+		if (moveLeft) playerMovePoint.x = -1;
+		if (moveRight) playerMovePoint.x = 1;
+
+		float moveSpeed = 3;
+		playerMovePoint.normalize(moveSpeed);
 
 		float collX = playerCenter.x + playerMovePoint.x;
 		float collY = playerCenter.y + playerMovePoint.y;
@@ -550,7 +551,7 @@ void update() {
 				moveDistMax = 96;
 				aggroRange = 96;
 				attackRate = 1;
-				attackDamage = 30;
+				attackDamage = 3;
 				goldGiven = 10;
 			}
 
