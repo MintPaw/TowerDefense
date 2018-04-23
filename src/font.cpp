@@ -190,7 +190,10 @@ void drawText(Texture *tex, BitmapFont *font, const char *text, TextProps *props
 		int charY = cursor.y + charDef->yoff;
 
 		if (text[i] != ' ') {
+			// profiler->startProfile("Draw Text");
 			drawTextureToTexture(font->texture, tex, charDef->x, charDef->y, charDef->width, charDef->height, charX, charY);
+			// profiler->endProfile("Draw Text");
+			// printf("Drew text, took %0.4fms\n", profiler->getMsResult("Draw Text"));
 		}
 
 		charRects[charRectsNum++].setTo(charX, charY, charDef->width, charDef->height);

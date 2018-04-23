@@ -663,19 +663,15 @@ void setTexture(GLuint texture, int slot) {
 
 void setFramebuffer(GLuint framebuffer) {
 	if (renderer->currentFramebuffer == framebuffer) return;
+	renderer->currentFramebufferTexture = -1; // I think this is required
 	renderer->currentFramebuffer = framebuffer;
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 	CheckGlError();
 }
 
 void setFramebufferTexture(GLuint texture) {
-	/////
-	// This blows everything up for an unknown reason
-	// Probably because default is 0 after some operation like setFramebuffer
-	// But I need to actually call this anyways
-	/////
-	// if (renderer->currentFramebufferTexture == texture) return;
-	// renderer->currentFramebufferTexture = texture;
+	if (renderer->currentFramebufferTexture == texture) return;
+	renderer->currentFramebufferTexture = texture;
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 	CheckGlError();
