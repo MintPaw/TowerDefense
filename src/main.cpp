@@ -41,6 +41,8 @@ struct Bullet {
 	float damage;
 	BulletType type;
 	Texture *tex;
+
+	Turret *sourceTurret;
 };
 
 struct Enemy {
@@ -55,6 +57,7 @@ struct Enemy {
 	float stateTime;
 	Point nextPos;
 	Turret *targetTurret;
+	Turret *superAggroTurret;
 	bool chasingPlayer;
 	Rect chaseRect;
 
@@ -530,7 +533,7 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nC
 					moveDistMax = 96;
 					aggroRange = 96;
 					attackRate = 1;
-					attackDamage = 3;
+					attackDamage = 30;
 					goldGiven = 10;
 				}
 
@@ -579,6 +582,16 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nC
 					enemy->targetTurret = closestTurret;
 					enemy->chaseRect.setTo(closestTurret->x, closestTurret->y, closestTurret->baseTex->width, closestTurret->baseTex->height);
 					targetInRange = true;
+				}
+
+				if (enemy->superAggroTurret) {
+					if (!enemy->superAggroTurret->exists) {
+						enemy->superAggroTurret = NULL;
+					} else if (!enemy->chasingPlayer && !enemy->targetTurret) {
+						targetInRange = true;
+						enemy->targetTurret = enemy->superAggroTurret;
+						enemy->chaseRect.setTo(closestTurret->x, closestTurret->y, closestTurret->baseTex->width, closestTurret->baseTex->height);
+					}
 				}
 
 				if (targetInRange) {
@@ -645,6 +658,7 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nC
 					turret->attackTime += platform->elapsed;
 					if (turret->attackTime > turretRate) {
 						Bullet *bullet = shootBullet(turretCenter.x, turretCenter.y, BULLET_BASIC, turret->gunRotation, 0);
+						bullet->sourceTurret = turret;
 						bullet->damage = turretDamage;
 						turret->attackTime = 0;
 					}
@@ -677,6 +691,7 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nC
 
 					if (bulletRect.intersects(&enemyRect)) {
 						bullet->exists = false;
+						if (!enemy->superAggroTurret) enemy->superAggroTurret = bullet->sourceTurret;
 						enemy->hp -= bullet->damage;
 					}
 				}
