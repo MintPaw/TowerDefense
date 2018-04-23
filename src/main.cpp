@@ -696,9 +696,10 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nC
 			}
 		}
 
+		TextProps goldTextProps;
 		{ /// Hud
-			drawText(game->frameTimeText, game->smallFont, "Frame time: %d", platform->frameTime);
-			drawText(game->goldText, game->mainFont, "Gold: %d", game->gold);
+			drawText(game->frameTimeText, game->smallFont, "Frame time: %d", NULL, platform->frameTime);
+			drawText(game->goldText, game->mainFont, "Gold: %d", &goldTextProps, game->gold);
 		}
 
 		/// Section: Render
@@ -835,6 +836,8 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nC
 
 			defaultSpriteDef(&def);
 			def.tex = game->goldText;
+			def.pos.x = platform->windowWidth - goldTextProps.width;
+			def.pos.y = platform->windowHeight - goldTextProps.height;
 			def.scrollFactor.setTo(0, 0);
 			drawSpriteEx(&def);
 		}

@@ -1,5 +1,10 @@
 #pragma once
 
+struct TextProps {
+	float width;
+	float height;
+};
+
 struct BitmapCharDef {
 	int id, x, y, width, height, xoff, yoff, xadvance;
 };
@@ -21,3 +26,4 @@ struct BitmapFont {
 };
 
 BitmapFont *loadBitmapFontPath(const char *fntPath);
+void drawText(Texture *tex, BitmapFont *font, const char *text, TextProps *props=NULL, ...);

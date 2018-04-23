@@ -104,12 +104,11 @@ BitmapFont *loadBitmapFontPath(const char *fntPath) {
 	return font;
 }
 
-void drawText(Texture *tex, BitmapFont *font, const char *text, ...);
-void drawText(Texture *tex, BitmapFont *font, const char *text, ...) {
+void drawText(Texture *tex, BitmapFont *font, const char *text, TextProps *props, ...) {
 	char *realText = (char *)malloc(TEXT_MAX);
 
 	va_list argptr;
-	va_start(argptr, text);
+	va_start(argptr, props);
 	vsprintf(realText, text, argptr);
 	va_end(argptr);
 
@@ -203,6 +202,11 @@ void drawText(Texture *tex, BitmapFont *font, const char *text, ...) {
 	textHeight += font->lineHeight;
 
 	free(realText);
+
+	if (props) {
+		props->width = textWidth;
+		props->height = textHeight;
+	}
 }
 
 BitmapCharDef *getCharDef(BitmapFont *font, int ch) {
