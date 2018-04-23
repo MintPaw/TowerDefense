@@ -5,6 +5,11 @@ enum KeyState { KEY_RELEASED = 0, KEY_PRESSED, KEY_JUST_RELEASED, KEY_JUST_PRESS
 struct NanoTime {
 	unsigned int seconds;
 	unsigned int nanos;
+
+#ifdef _WIN32
+	LARGE_INTEGER winFreq;
+	LARGE_INTEGER time;
+#endif
 };
 
 void initPlatform();

@@ -190,6 +190,16 @@ void platformSleep(int ms) {
 
 void getNanoTime(NanoTime *time) {
 #ifdef _WIN32
+	LARGE_INTEGER winTime;
+	LARGE_INTEGER freq;
+	QueryPerformanceFrequency(&freq); 
+	QueryPerformanceCounter(&winTime);
+	unsigned int nanos = winTime.QuadPart * 1000000000 / freq.QuadPart;
+	time->seconds = nanos / 1000000000;
+	time->nanos = nanos % 1000000000;
+
+	// time->time = StartingTime;
+	// time->winFreq = Frequency;
 #elif __linux__
 	timespec ts;
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
