@@ -208,7 +208,7 @@ void update() {
 
 		game->player.maxHp = game->player.hp = 100;
 		game->currentInv = INV_HANDS;
-		game->gold = 30000;
+		game->gold = 300;
 
 		game->player.tex = uploadPngTexturePath("assets/sprites/player.png");
 		game->tilesetTexture = uploadPngTexturePath("assets/tilesets/tileset.png");
