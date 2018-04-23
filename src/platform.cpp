@@ -185,3 +185,13 @@ void platformSleep(int ms) {
 	nanosleep(&ts, NULL);
 #endif
 }
+
+void getNanoTime(NanoTime *time) {
+#ifdef _WIN32
+#elif __linux__
+	timespec ts;
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
+	time->seconds = ts.tv_sec;
+	time->nanos = ts.tv_nsec;
+#endif
+}

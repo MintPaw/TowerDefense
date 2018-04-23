@@ -16,4 +16,5 @@
 #include "renderer.cpp"
 
 #include "font.cpp"
+#include "profile.cpp"
 #include "main.cpp"

@@ -156,6 +156,8 @@ struct Game {
 
 	int gold;
 	Texture *goldText;
+
+	Profiler profiler;
 };
 
 void update();
@@ -202,9 +204,11 @@ void update() {
 		game = (Game *)malloc(sizeof(Game));
 		memset(game, 0, sizeof(Game));
 
+		initProfiler(&game->profiler);
+
 		game->player.maxHp = game->player.hp = 100;
 		game->currentInv = INV_HANDS;
-		game->gold = 300;
+		game->gold = 30000;
 
 		game->player.tex = uploadPngTexturePath("assets/sprites/player.png");
 		game->tilesetTexture = uploadPngTexturePath("assets/tilesets/tileset.png");
@@ -347,6 +351,17 @@ void update() {
 	}
 
 	/// Section: Update
+	Profiler *profiler = &game->profiler;
+	float updateMs;
+	float renderMs;
+	{ /// Profiler
+		updateMs = profiler->getMsResult("Update");
+		renderMs = profiler->getMsResult("Render");
+		profiler->reset();
+	}
+
+	profiler->startProfile("Update");
+
 	Player *player = &game->player;
 	Point playerCenter = {player->x + player->tex->width/2, player->y + player->tex->height * 0.90f};
 	Rect playerRect = {player->x, player->y, (float)player->tex->width, (float)player->tex->height};
@@ -357,16 +372,18 @@ void update() {
 	bool moveRight = false;
 	bool invLeft = false;
 	bool invRight = false;
-	if (getKeyPressed('W')) moveUp = true;
-	if (getKeyPressed('S')) moveDown = true;
-	if (getKeyPressed('A')) moveLeft = true;
-	if (getKeyPressed('D')) moveRight = true;
+	{ /// Inputs
+		if (getKeyPressed('W')) moveUp = true;
+		if (getKeyPressed('S')) moveDown = true;
+		if (getKeyPressed('A')) moveLeft = true;
+		if (getKeyPressed('D')) moveRight = true;
 
-	if (platform->keys['Q'] == KEY_JUST_PRESSED) invLeft = true;
-	if (platform->keys['E'] == KEY_JUST_PRESSED) invRight = true;
+		if (platform->keys['Q'] == KEY_JUST_PRESSED) invLeft = true;
+		if (platform->keys['E'] == KEY_JUST_PRESSED) invRight = true;
 
-	if (platform->keys['-'] == KEY_JUST_PRESSED) platform->timeScale /= 2.0;
-	if (platform->keys['='] == KEY_JUST_PRESSED) platform->timeScale *= 2.0;
+		if (platform->keys['-'] == KEY_JUST_PRESSED) platform->timeScale /= 2.0;
+		if (platform->keys['='] == KEY_JUST_PRESSED) platform->timeScale *= 2.0;
+	}
 
 	{ /// Inventory
 		InvType newInv = game->currentInv;
@@ -736,11 +753,20 @@ void update() {
 
 	TextProps goldTextProps;
 	{ /// Hud
-		drawText(game->debugText, game->smallFont, "Frame time: %d\nTime scale: %0.2f\n", NULL, platform->frameTime, platform->timeScale);
+		drawText(
+			game->debugText,
+			game->smallFont,
+			"Frame time: %d\nUpdate: %0.4f\nRender: %0.4f\nTime scale: %0.2f\n",
+			NULL,
+			platform->frameTime, updateMs, renderMs, platform->timeScale);
+
 		drawText(game->goldText, game->mainFont, "Gold: %d", &goldTextProps, game->gold);
 	}
 
+	profiler->endProfile("Update");
+
 	/// Section: Render
+	profiler->startProfile("Render");
 	clearRenderer();
 	SpriteDef def;
 
@@ -902,6 +928,7 @@ void update() {
 	// drawRect(player->x + 100 - renderer->camPos.x, player->y + 100 - renderer->camPos.y, 100, 100, 0xFFFFFFFF);
 
 	swapBuffers();
+	profiler->endProfile("Render");
 }
 
 void drawHpBar(float x, float y, float value, float total) {
