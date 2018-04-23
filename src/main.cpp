@@ -206,6 +206,7 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nC
 			game->player.maxHp = game->player.hp = 100;
 
 			game->currentInv = INV_HANDS;
+			game->gold = 300;
 
 			game->tilesetTexture = uploadPngTexturePath("assets/tilesets/tileset.png");
 
@@ -420,6 +421,7 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nC
 		SpriteDef upgradeOption2;
 		SpriteDef upgradeOption3;
 		SpriteDef disassembleOption;
+		bool notEnoughGold = false;
 		{ /// Selecter
 			Turret *selecterOverTurret = NULL;
 			bool selecterOverPlayer = false;
@@ -432,13 +434,21 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nC
 
 			if (selecterRect.containsPoint(&playerCenter)) selecterOverPlayer = true;
 
+			float turretPrice = 0;
+			if (game->currentInv == INV_TURRET_BASIC) {
+				turretPrice = 100;
+			}
+
+			if (game->gold < turretPrice) notEnoughGold = true;
+
 			if (game->currentInv == INV_HANDS) {
 				if (selecterOverTurret) selecterValid = true;
 				else selecterValid = false;
 			} else {
-				if (selecterOverTurret || selecterOverPlayer) selecterValid = false;
+				if (selecterOverTurret || selecterOverPlayer || notEnoughGold) selecterValid = false;
 				else selecterValid = true;
 			}
+
 
 			defaultSpriteDef(&upgradeOption1);
 			defaultSpriteDef(&upgradeOption2);
@@ -482,7 +492,10 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nC
 				}
 
 				if (game->currentInv == INV_TURRET_BASIC) {
-					if (selecterValid) buildTurret(selecterPos.x, selecterPos.y, INV_TURRET_BASIC);
+					if (selecterValid) {
+						buildTurret(selecterPos.x, selecterPos.y, INV_TURRET_BASIC);
+						game->gold -= turretPrice;
+					}
 				} else if (game->currentInv == INV_HANDS) {
 					if (selecterValid) {
 						game->selectedTurret = selecterOverTurret;
@@ -853,6 +866,7 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nC
 			def.tex = game->goldText;
 			def.pos.x = platform->windowWidth - goldTextProps.width;
 			def.pos.y = platform->windowHeight - goldTextProps.height;
+			if (notEnoughGold) def.tint = 0xFFFF0000;
 			def.scrollFactor.setTo(0, 0);
 			drawSpriteEx(&def);
 		}
