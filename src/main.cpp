@@ -4,6 +4,7 @@
 			Move timeScale and elapsed to main.cpp
 
 			Profile npcs
+			Profile dialog
 			*/
 #include "platform.h"
 #include "renderer.h"
@@ -174,7 +175,7 @@ struct Game {
 	Text goldText;
 
 	Npc npcs[NPCS_MAX];
-	Text *dialogText;
+	Text dialogText;
 };
 
 void update();
@@ -838,22 +839,25 @@ void update() {
 	}
 	profiler->endProfile("Update Items");
 
+	Npc *npcOver = NULL;
+	const char *dialog = NULL;
 	{ /// Npcs
-		const char *dialog = NULL;
-
 		for (int i = 0; i < NPCS_MAX; i++) {
 			Npc *npc = &game->npcs[i];
 			if (!npc->exists) continue;
 
 			Rect npcRect = {npc->x, npc->y, (float)npc->tex->width, (float)npc->tex->height};
 			if (playerRect.intersects(&npcRect)) {
+				npcOver = npc;
 				dialog = "Hello";
 			}
 		}
+	}
 
-		// if (dialog) {
-		// 	drawText(game->dialogText, game->mainFont, dialogText);
-		// }
+	{ /// Dialog
+		if (dialog) {
+			drawText(&game->dialogText, game->mainFont, dialog);
+		}
 	}
 
 	profiler->startProfile("Update Hud");
@@ -1040,6 +1044,23 @@ void update() {
 			if (notEnoughGold) def.tint = 0xFFFF0000;
 			def.scrollFactor.setTo(0, 0);
 			drawSpriteEx(&def);
+		}
+
+		{ /// Dialog text
+			if (dialog) {
+				defaultSpriteDef(&def);
+				def.tex = game->dialogText.tex;
+
+				if (npcOver) {
+					def.pos.x = npcOver->x + npcOver->tex->width/2 - game->dialogText.width/2;
+					def.pos.y = npcOver->y - game->dialogText.height - 10;
+				} else {
+					def.pos.x = player->x + player->tex->width/2 - game->dialogText.width/2;
+					def.pos.y = player->y - game->dialogText.height - 10;
+				}
+
+				drawSpriteEx(&def);
+			}
 		}
 
 		{ /// Turret range
