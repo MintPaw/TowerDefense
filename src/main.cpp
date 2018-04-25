@@ -207,7 +207,7 @@ void update() {
 
 		initProfiler(&game->profiler);
 
-		game->player.maxHp = game->player.hp = 100;
+		game->player.maxHp = game->player.hp = 20;
 		game->currentInv = INV_HANDS;
 		game->gold = 300;
 
