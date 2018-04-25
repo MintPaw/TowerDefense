@@ -606,7 +606,15 @@ void update() {
 			if (spawner->timeLeft <= 0 && spawner->enemyCount < spawner->max) {
 				Point spawnPoint;
 				spawner->rect.randomPoint(&spawnPoint);
-				spawnEnemy(spawnPoint.x, spawnPoint.y, ENEMY_BAT);
+				Enemy *enemy = spawnEnemy(spawnPoint.x, spawnPoint.y, ENEMY_BAT);
+
+				for (int j = 0; j < ENEMIES_PER_SPAWNER_MAX; j++) {
+					if (!spawner->enemies[j]) {
+						spawner->enemies[j] = enemy;
+						break;
+					}
+				}
+
 				spawner->enemyCount++;
 				spawner->timeLeft = spawner->interval;
 			}
