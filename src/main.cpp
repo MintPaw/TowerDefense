@@ -849,7 +849,7 @@ void update() {
 			Rect npcRect = {npc->x, npc->y, (float)npc->tex->width, (float)npc->tex->height};
 			if (playerRect.intersects(&npcRect)) {
 				npcOver = npc;
-				dialog = "Hello";
+				dialog = "Did you know you can press Q and E to change your current item?\n\nCome back later for another tip...";
 			}
 		}
 	}
