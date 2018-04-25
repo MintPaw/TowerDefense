@@ -1,9 +1,6 @@
 /*
 			TODO:
 			Make gold texture and untint
-
-			Profile npcs
-			Profile dialog
 			*/
 #include "platform.h"
 #include "renderer.h"
@@ -396,6 +393,8 @@ void update() {
 	float updateItems;
 	float updateHud;
 	float updateProfiler;
+	float updateNpcs;
+	float updateDialog;
 	{ /// Profiler
 		updateMs = profiler->getAverage("Update");
 		renderMs = profiler->getAverage("Render");
@@ -408,6 +407,8 @@ void update() {
 		updateBullets = profiler->getAverage("Update Bullets");
 		updateItems = profiler->getAverage("Update Items");
 		updateHud = profiler->getAverage("Update Hud");
+		updateNpcs = profiler->getAverage("Update Npcs");
+		updateDialog = profiler->getAverage("Update Dialog");
 
 		profiler->endProfile("Update Profiler");
 		updateProfiler = profiler->getAverage("Update Profiler");
@@ -850,6 +851,7 @@ void update() {
 	}
 	profiler->endProfile("Update Items");
 
+	profiler->startProfile("Update Npcs");
 	Npc *npcOver = NULL;
 	const char *dialog = NULL;
 	{ /// Npcs
@@ -864,12 +866,15 @@ void update() {
 			}
 		}
 	}
+	profiler->endProfile("Update Npcs");
 
+	profiler->startProfile("Update Dialog");
 	{ /// Dialog
 		if (dialog) {
 			drawText(&game->dialogText, game->mainFont, dialog);
 		}
 	}
+	profiler->endProfile("Update Dialog");
 
 	profiler->startProfile("Update Hud");
 	{ /// Hud
@@ -880,11 +885,13 @@ void update() {
 				"Frame time: %d\n"
 				"Update: %0.2f Render: %0.2f\n"
 				"Inv: %0.2f Move: %0.2f Sele: %0.2f Spawn: %0.2f Ene: %0.2f Tur: %0.2f Bul: %0.2f Item: %0.2f Hud: %0.2f Prof: %0.2f\n"
+				"Npc: %0.2f, Dia: %0.2f\n"
 				"Time scale: %0.2f\n",
 				NULL,
 				platform->frameTime,
 				updateMs, renderMs,
 				updateInv, updateMovement, updateSelecter, updateSpawners, updateEnemies, updateTurrets, updateBullets, updateItems, updateHud, updateProfiler,
+				updateNpcs, updateDialog,
 				game->timeScale
 			);
 		}

@@ -118,6 +118,7 @@ void drawText(Text *tf, BitmapFont *font, const char *text, ...) {
 	va_end(argptr);
 
 	text = (char *)realText;
+	if (streq(text, tf->text)) return;
 
 	Texture *tex = tf->tex;
 	clearTexture(tex);
