@@ -1,7 +1,6 @@
 /*
 			TODO:
 			Make gold texture and untint
-			Move timeScale and elapsed to main.cpp
 
 			Profile npcs
 			Profile dialog
@@ -126,6 +125,7 @@ struct Player {
 
 struct Game {
 	Profiler profiler;
+	float timeScale;
 
 	Texture *tilesetTexture;
 
@@ -227,6 +227,7 @@ void update() {
 		game->player.maxHp = game->player.hp = 20;
 		game->currentInv = INV_HANDS;
 		game->gold = 300;
+		game->timeScale = 1;
 
 		game->player.tex = uploadPngTexturePath("assets/sprites/player.png");
 		game->tilesetTexture = uploadPngTexturePath("assets/tilesets/tileset.png");
@@ -425,6 +426,8 @@ void update() {
 	Point playerCenter = {player->x + player->tex->width/2, player->y + player->tex->height * 0.90f};
 	Rect playerRect = {player->x, player->y, (float)player->tex->width, (float)player->tex->height};
 
+	float elapsed = platform->elapsed * game->timeScale;
+
 	bool moveUp = false;
 	bool moveDown = false;
 	bool moveLeft = false;
@@ -440,8 +443,8 @@ void update() {
 		if (platform->keys['Q'] == KEY_JUST_PRESSED) invLeft = true;
 		if (platform->keys['E'] == KEY_JUST_PRESSED) invRight = true;
 
-		if (platform->keys['-'] == KEY_JUST_PRESSED) platform->timeScale /= 2.0;
-		if (platform->keys['='] == KEY_JUST_PRESSED) platform->timeScale *= 2.0;
+		if (platform->keys['-'] == KEY_JUST_PRESSED) game->timeScale /= 2.0;
+		if (platform->keys['='] == KEY_JUST_PRESSED) game->timeScale *= 2.0;
 	}
 
 	profiler->startProfile("Update Inventory");
@@ -475,7 +478,7 @@ void update() {
 		if (moveLeft) playerMovePoint.x = -1;
 		if (moveRight) playerMovePoint.x = 1;
 
-		float moveSpeed = 3 * platform->timeScale;
+		float moveSpeed = 3 * game->timeScale;
 		playerMovePoint.normalize(moveSpeed);
 
 		float collX = playerCenter.x + playerMovePoint.x;
@@ -602,7 +605,7 @@ void update() {
 		for (int i = 0; i < SPAWNERS_MAX; i++) {
 			Spawner *spawner = &game->spawners[i];
 			if (!spawner->exists) continue;
-			spawner->timeLeft -= platform->elapsed;
+			spawner->timeLeft -= elapsed;
 			if (spawner->timeLeft <= 0 && spawner->enemyCount < spawner->max) {
 				Point spawnPoint;
 				spawner->rect.randomPoint(&spawnPoint);
@@ -653,10 +656,10 @@ void update() {
 				goldGiven = 10;
 			}
 
-			moveSpeed *= platform->timeScale;
-			chaseSpeed *= platform->timeScale;
+			moveSpeed *= game->timeScale;
+			chaseSpeed *= game->timeScale;
 
-			enemy->stateTime += platform->elapsed;
+			enemy->stateTime += elapsed;
 			if (enemy->state == STATE_IDLE) {
 				if (enemy->stateTime > idleLimit) {
 					enemy->state = STATE_MOVING;
@@ -730,7 +733,7 @@ void update() {
 			}
 
 			if (enemy->state == STATE_ATTACKING) {
-				enemy->attackTime += platform->elapsed;
+				enemy->attackTime += elapsed;
 				if (enemy->attackTime > attackRate) {
 					if (enemy->chasingPlayer) player->hp -= attackDamage;
 					if (enemy->targetTurret) enemy->targetTurret->hp -= attackDamage;
@@ -768,7 +771,7 @@ void update() {
 			if (turret == hoveredTurret) hoveredRange = turretRange;
 
 			if (turret->buildPerc < 1) {
-				turret->buildPerc += 1/120.0;
+				turret->buildPerc += 1/120.0 * game->timeScale;
 				continue;
 			}
 
@@ -784,7 +787,7 @@ void update() {
 			if (enemyDist < turretRange) {
 				turret->gunRotation = toDeg(radsBetween(turretCenter.x, turretCenter.y, enemyCenter.x, enemyCenter.y));
 
-				turret->attackTime += platform->elapsed;
+				turret->attackTime += elapsed;
 				if (turret->attackTime > turretRate) {
 					Bullet *bullet = shootBullet(turretCenter.x, turretCenter.y, BULLET_BASIC, turret->gunRotation, 0);
 					bullet->sourceTurret = turret;
@@ -810,7 +813,7 @@ void update() {
 				bulletSpeed = 5;
 			}
 
-			bulletSpeed *= platform->timeScale;
+			bulletSpeed *= game->timeScale;
 
 			bullet->x += cos(toRad(bullet->rotation)) * bulletSpeed;
 			bullet->y += sin(toRad(bullet->rotation)) * bulletSpeed;
@@ -882,7 +885,7 @@ void update() {
 				platform->frameTime,
 				updateMs, renderMs,
 				updateInv, updateMovement, updateSelecter, updateSpawners, updateEnemies, updateTurrets, updateBullets, updateItems, updateHud, updateProfiler,
-				platform->timeScale
+				game->timeScale
 			);
 		}
 
