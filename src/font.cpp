@@ -1,6 +1,12 @@
 #include "font.h"
 #include "profile.h"
 
+void initText(Text *tf, float fieldWidth, float fieldHeight) {
+	tf->tex = uploadTexture(NULL, fieldWidth, fieldHeight);
+	tf->fieldWidth = fieldWidth;
+	tf->fieldHeight = fieldHeight;
+}
+
 int getKern(BitmapFont *font, int first, int second);
 BitmapCharDef *getCharDef(BitmapFont *font, int ch);
 
@@ -103,16 +109,17 @@ BitmapFont *loadBitmapFontPath(const char *fntPath) {
 	return font;
 }
 
-void drawText(Texture *tex, BitmapFont *font, const char *text, TextProps *props, ...) {
+void drawText(Text *tf, BitmapFont *font, const char *text, ...) {
 	char *realText = (char *)malloc(TEXT_MAX);
 
 	va_list argptr;
-	va_start(argptr, props);
+	va_start(argptr, text);
 	vsprintf(realText, text, argptr);
 	va_end(argptr);
 
 	text = (char *)realText;
 
+	Texture *tex = tf->tex;
 	clearTexture(tex);
 
 	Rect charRects[TEXT_MAX];
@@ -203,12 +210,9 @@ void drawText(Texture *tex, BitmapFont *font, const char *text, TextProps *props
 
 	textHeight += font->lineHeight;
 
-	if (props) {
-		props->exists = true;
-		props->width = textWidth;
-		props->height = textHeight;
-		strcpy(props->text, text);
-	}
+	tf->width = textWidth;
+	tf->height = textHeight;
+	strcpy(tf->text, text);
 
 	free(realText);
 }

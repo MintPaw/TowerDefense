@@ -162,7 +162,7 @@ struct Game {
 	InvType currentInv;
 	Texture *selecterTexture;
 
-	Texture *debugText;
+	Text debugText;
 
 	Rect colls[COLLS_MAX];
 	Spawner spawners[SPAWNERS_MAX];
@@ -171,10 +171,10 @@ struct Game {
 	Item items[ITEMS_MAX];
 
 	int gold;
-	Texture *goldText;
+	Text goldText;
 
 	Npc npcs[NPCS_MAX];
-	Texture *dialogText;
+	Text *dialogText;
 };
 
 void update();
@@ -249,9 +249,9 @@ void update() {
 		game->mainFont = loadBitmapFontPath("assets/fonts/OpenSans-Regular_22.fnt");
 		game->smallFont = loadBitmapFontPath("assets/fonts/OpenSans-Regular_16.fnt");
 
-		game->debugText = uploadTexture(NULL, 1024, 256);
-		game->goldText = uploadTexture(NULL, 512, 256);
-		game->dialogText = uploadTexture(NULL, 512, 512);
+		initText(&game->debugText, 1024, 256);
+		initText(&game->goldText, 512, 256);
+		initText(&game->dialogText, 512, 512);
 
 		{ /// Setup map
 			void *mapData;
@@ -838,11 +838,8 @@ void update() {
 	}
 	profiler->endProfile("Update Items");
 
-	TextProps dialogProps = {};
 	{ /// Npcs
 		const char *dialog = NULL;
-		// char dialog[TEXT_MAX];
-		// dialog[0] = '\0';
 
 		for (int i = 0; i < NPCS_MAX; i++) {
 			Npc *npc = &game->npcs[i];
@@ -855,16 +852,15 @@ void update() {
 		}
 
 		// if (dialog) {
-		// 	drawText(game->dialogText, game->mainFont, dialogText, &goldTextProps);
+		// 	drawText(game->dialogText, game->mainFont, dialogText);
 		// }
 	}
 
 	profiler->startProfile("Update Hud");
-	TextProps goldTextProps = {};
 	{ /// Hud
 		if (platform->frameCount % PROFILER_AVERAGE_FRAMES == 0) {
 			drawText(
-				game->debugText,
+				&game->debugText,
 				game->smallFont,
 				"Frame time: %d\n"
 				"Update: %0.2f Render: %0.2f\n"
@@ -874,10 +870,11 @@ void update() {
 				platform->frameTime,
 				updateMs, renderMs,
 				updateInv, updateMovement, updateSelecter, updateSpawners, updateEnemies, updateTurrets, updateBullets, updateItems, updateHud, updateProfiler,
-				platform->timeScale);
+				platform->timeScale
+			);
 		}
 
-		drawText(game->goldText, game->mainFont, "Gold: %d", &goldTextProps, game->gold);
+		drawText(&game->goldText, game->mainFont, "Gold: %d", game->gold);
 	}
 	profiler->endProfile("Update Hud");
 
@@ -1030,16 +1027,16 @@ void update() {
 	{ /// Draw hud
 		{ /// Debug text
 			defaultSpriteDef(&def);
-			def.tex = game->debugText;
+			def.tex = game->debugText.tex;
 			def.scrollFactor.setTo(0, 0);
 			drawSpriteEx(&def);
 		}
 
 		{ /// Gold text
 			defaultSpriteDef(&def);
-			def.tex = game->goldText;
-			def.pos.x = platform->windowWidth - goldTextProps.width;
-			def.pos.y = platform->windowHeight - goldTextProps.height;
+			def.tex = game->goldText.tex;
+			def.pos.x = platform->windowWidth - game->goldText.width;
+			def.pos.y = platform->windowHeight - game->goldText.height;
 			if (notEnoughGold) def.tint = 0xFFFF0000;
 			def.scrollFactor.setTo(0, 0);
 			drawSpriteEx(&def);

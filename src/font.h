@@ -2,14 +2,15 @@
 
 #define TEXT_MAX 2048
 
-// struct Text {
-// 	bool exists;
-// 	float width;
-// 	float height;
-// 	char text[TEXT_MAX];
+struct Text {
+	float width;
+	float height;
+	float fieldWidth;
+	float fieldHeight;
+	char text[TEXT_MAX];
 
-// 	Texture *tex;
-// };
+	Texture *tex;
+};
 
 struct TextProps {
 	bool exists;
@@ -38,5 +39,6 @@ struct BitmapFont {
 	Texture *texture;
 };
 
+void initText(Text *tf, float fieldWidth, float fieldHeight);
 BitmapFont *loadBitmapFontPath(const char *fntPath);
-void drawText(Texture *tex, BitmapFont *font, const char *text, TextProps *props=NULL, ...);
+void drawText(Text *tf, BitmapFont *font, const char *text, ...);
