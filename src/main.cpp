@@ -89,6 +89,7 @@ struct Turret {
 	float maxHp;
 	float attackTime;
 	int invested;
+	float buildPerc;
 };
 
 // struct Frame {
@@ -721,6 +722,11 @@ void update() {
 				turretDamage = 5;
 			}
 
+			if (turret->buildPerc < 1) {
+				turret->buildPerc += 1/120.0;
+				continue;
+			}
+
 			Enemy *closestEnemy = getClosestEnemy(turretCenter.x, turretCenter.y);
 			float enemyDist = 999999;
 
@@ -839,6 +845,7 @@ void update() {
 			def.tex = turret->baseTex;
 			def.pos.x = turret->x;
 			def.pos.y = turret->y;
+			def.alpha = turret->buildPerc;
 			drawSpriteEx(&def);
 		}
 	}
@@ -853,6 +860,7 @@ void update() {
 			def.pos.y = turret->y + turret->baseTex->height/2 - turret->gunTex->height/2;
 			def.rotation = turret->gunRotation;
 			def.pivot.setTo(turret->gunTex->height/2, turret->gunTex->height/2);
+			def.alpha = turret->buildPerc;
 			drawSpriteEx(&def);
 		}
 	}

@@ -13,6 +13,7 @@ struct SpriteDef {
 	int tint;
 	float rotation;
 	Point pivot;
+	float alpha;
 };
 void initRenderer();
 void clearRenderer();

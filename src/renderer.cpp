@@ -389,6 +389,7 @@ void drawSprite(Texture *tex, float x, float y) {
 void defaultSpriteDef(SpriteDef *def) {
 	memset(def, 0, sizeof(SpriteDef));
 	def->scrollFactor.setTo(1, 1);
+	def->alpha = 1;
 }
 
 void drawSpriteEx(SpriteDef *def) {
@@ -436,7 +437,7 @@ void drawSpriteEx(SpriteDef *def) {
 		((def->tint >> 24) & 0xff)/255.0
 	);
 
-	glUniform1f(renderer->spriteProgram.u_alpha, 1);
+	glUniform1f(renderer->spriteProgram.u_alpha, def->alpha);
 
 	CheckGlError();
 
