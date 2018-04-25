@@ -478,6 +478,7 @@ void update() {
 	SpriteDef upgradeOption3;
 	SpriteDef disassembleOption;
 	bool notEnoughGold = false;
+	Turret *hoveredTurret = NULL;
 	{ /// Selecter
 		Turret *selecterOverTurret = NULL;
 		bool selecterOverPlayer = false;
@@ -498,8 +499,12 @@ void update() {
 		if (game->gold < turretPrice) notEnoughGold = true;
 
 		if (game->currentInv == INV_HANDS) {
-			if (selecterOverTurret) selecterValid = true;
-			else selecterValid = false;
+			if (selecterOverTurret) {
+				hoveredTurret = selecterOverTurret;
+				selecterValid = true;
+			} else {
+				selecterValid = false;
+			}
 		} else {
 			if (selecterOverTurret || selecterOverPlayer || notEnoughGold) selecterValid = false;
 			else selecterValid = true;
@@ -709,6 +714,7 @@ void update() {
 	profiler->endProfile("Update Enemies");
 
 	profiler->startProfile("Update Turrets");
+	float hoveredRange;
 	{ /// Turrets
 		for (int i = 0; i < TURRETS_MAX; i++) {
 			Turret *turret = &game->turrets[i];
@@ -718,9 +724,11 @@ void update() {
 			float turretRange, turretRate, turretDamage;
 			if (turret->type == TURRET_BASIC) {
 				turretRange = 320;
-				turretRate = 1;
+				turretRate = 3;
 				turretDamage = 5;
 			}
+
+			if (turret == hoveredTurret) hoveredRange = turretRange;
 
 			if (turret->buildPerc < 1) {
 				turret->buildPerc += 1/120.0;
@@ -958,18 +966,33 @@ void update() {
 	}
 
 	{ /// Draw hud
-		defaultSpriteDef(&def);
-		def.tex = game->debugText;
-		def.scrollFactor.setTo(0, 0);
-		drawSpriteEx(&def);
+		{ /// Debug text
+			defaultSpriteDef(&def);
+			def.tex = game->debugText;
+			def.scrollFactor.setTo(0, 0);
+			drawSpriteEx(&def);
+		}
 
-		defaultSpriteDef(&def);
-		def.tex = game->goldText;
-		def.pos.x = platform->windowWidth - goldTextProps.width;
-		def.pos.y = platform->windowHeight - goldTextProps.height;
-		if (notEnoughGold) def.tint = 0xFFFF0000;
-		def.scrollFactor.setTo(0, 0);
-		drawSpriteEx(&def);
+		{ /// Gold text
+			defaultSpriteDef(&def);
+			def.tex = game->goldText;
+			def.pos.x = platform->windowWidth - goldTextProps.width;
+			def.pos.y = platform->windowHeight - goldTextProps.height;
+			if (notEnoughGold) def.tint = 0xFFFF0000;
+			def.scrollFactor.setTo(0, 0);
+			drawSpriteEx(&def);
+		}
+
+		{ /// Turret range
+			if (hoveredTurret) {
+				drawCircle(
+					hoveredTurret->x + hoveredTurret->baseTex->width/2 - renderer->camPos.x,
+					hoveredTurret->y + hoveredTurret->baseTex->height/2 - renderer->camPos.y,
+					hoveredRange * 2,
+					0x2200FF00
+				);
+			}
+		}
 	}
 
 	{ /// Draw hp bars
