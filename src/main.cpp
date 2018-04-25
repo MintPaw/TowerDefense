@@ -1,6 +1,7 @@
 /*
 			TODO:
 			Make gold texture and untint
+			Move timeScale and elapsed to main.cpp
 			*/
 #include "platform.h"
 #include "renderer.h"
@@ -12,6 +13,7 @@
 #define ENEMIES_PER_SPAWNER_MAX 256
 #define BULLETS_MAX 2048
 #define ITEMS_MAX 2048
+#define NPCS_MAX 32
 
 enum TurretType { TURRET_BASIC };
 enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
@@ -22,6 +24,13 @@ enum BulletType { BULLET_BASIC };
 enum ItemType { ITEM_GOLD };
 
 struct Turret;
+
+struct Npc {
+	bool exists;
+	float x;
+	float y;
+	Texture *tex;
+};
 
 struct Item {
 	bool exists;
@@ -113,6 +122,8 @@ struct Player {
 };
 
 struct Game {
+	Profiler profiler;
+
 	Texture *tilesetTexture;
 
 	Texture *basicTurretBaseTexture;
@@ -128,6 +139,8 @@ struct Game {
 	Texture *bulletBasicTexture;
 
 	Texture *goldTexture;
+
+	Texture *oldManNpcTexture;
 
 	BitmapFont *mainFont;
 	BitmapFont *smallFont;
@@ -158,7 +171,7 @@ struct Game {
 	int gold;
 	Texture *goldText;
 
-	Profiler profiler;
+	Npc npcs[NPCS_MAX];
 };
 
 void update();
@@ -228,6 +241,8 @@ void update() {
 
 		game->goldTexture = uploadPngTexturePath("assets/sprites/bulletBasic.png");
 
+		game->oldManNpcTexture = uploadPngTexturePath("assets/sprites/oldManNpc.png");
+
 		game->mainFont = loadBitmapFontPath("assets/fonts/OpenSans-Regular_22.fnt");
 		game->smallFont = loadBitmapFontPath("assets/fonts/OpenSans-Regular_16.fnt");
 
@@ -277,6 +292,16 @@ void update() {
 									if (streq(prop->name.ptr, "max")) spawner->max = value;
 								}
 								break;
+							}
+						} else if (streq(object->name.ptr, "oldManNpc")) {
+							for (int i = 0; i < NPCS_MAX; i++) {
+								Npc *npc = &game->npcs[i];
+								if (npc->exists) continue;
+								memset(npc, 0, sizeof(Npc));
+								npc->exists = true;
+								npc->x = object->x;
+								npc->y = object->y;
+								npc->tex = game->oldManNpcTexture;
 							}
 						}
 					}
@@ -892,6 +917,19 @@ void update() {
 		def.pos.x = player->x;
 		def.pos.y = player->y;
 		drawSpriteEx(&def);
+	}
+
+	{ /// Draw npcs
+		for (int i = 0; i < NPCS_MAX; i++) {
+			Npc *npc = &game->npcs[i];
+			if (!npc->exists) continue;
+
+			defaultSpriteDef(&def);
+			def.tex = npc->tex;
+			def.pos.x = npc->x;
+			def.pos.y = npc->y;
+			drawSpriteEx(&def);
+		}
 	}
 
 	{ /// Draw enemies
