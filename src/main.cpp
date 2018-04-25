@@ -2,6 +2,8 @@
 			TODO:
 			Make gold texture and untint
 			Move timeScale and elapsed to main.cpp
+
+			Profile npcs
 			*/
 #include "platform.h"
 #include "renderer.h"
@@ -172,6 +174,7 @@ struct Game {
 	Texture *goldText;
 
 	Npc npcs[NPCS_MAX];
+	Texture *dialogText;
 };
 
 void update();
@@ -247,8 +250,8 @@ void update() {
 		game->smallFont = loadBitmapFontPath("assets/fonts/OpenSans-Regular_16.fnt");
 
 		game->debugText = uploadTexture(NULL, 1024, 256);
-
 		game->goldText = uploadTexture(NULL, 512, 256);
+		game->dialogText = uploadTexture(NULL, 512, 512);
 
 		{ /// Setup map
 			void *mapData;
@@ -835,8 +838,29 @@ void update() {
 	}
 	profiler->endProfile("Update Items");
 
+	TextProps dialogProps = {};
+	{ /// Npcs
+		const char *dialog = NULL;
+		// char dialog[TEXT_MAX];
+		// dialog[0] = '\0';
+
+		for (int i = 0; i < NPCS_MAX; i++) {
+			Npc *npc = &game->npcs[i];
+			if (!npc->exists) continue;
+
+			Rect npcRect = {npc->x, npc->y, (float)npc->tex->width, (float)npc->tex->height};
+			if (playerRect.intersects(&npcRect)) {
+				dialog = "Hello";
+			}
+		}
+
+		// if (dialog) {
+		// 	drawText(game->dialogText, game->mainFont, dialogText, &goldTextProps);
+		// }
+	}
+
 	profiler->startProfile("Update Hud");
-	TextProps goldTextProps;
+	TextProps goldTextProps = {};
 	{ /// Hud
 		if (platform->frameCount % PROFILER_AVERAGE_FRAMES == 0) {
 			drawText(

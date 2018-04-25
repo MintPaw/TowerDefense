@@ -1,8 +1,6 @@
 #include "font.h"
 #include "profile.h"
 
-#define TEXT_MAX 2048
-
 int getKern(BitmapFont *font, int first, int second);
 BitmapCharDef *getCharDef(BitmapFont *font, int ch);
 
@@ -206,8 +204,10 @@ void drawText(Texture *tex, BitmapFont *font, const char *text, TextProps *props
 	textHeight += font->lineHeight;
 
 	if (props) {
+		props->exists = true;
 		props->width = textWidth;
 		props->height = textHeight;
+		strcpy(props->text, text);
 	}
 
 	free(realText);

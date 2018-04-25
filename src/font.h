@@ -1,8 +1,21 @@
 #pragma once
 
+#define TEXT_MAX 2048
+
+// struct Text {
+// 	bool exists;
+// 	float width;
+// 	float height;
+// 	char text[TEXT_MAX];
+
+// 	Texture *tex;
+// };
+
 struct TextProps {
+	bool exists;
 	float width;
 	float height;
+	char text[TEXT_MAX];
 };
 
 struct BitmapCharDef {
