@@ -609,7 +609,7 @@ void update() {
 				moveSpeed = 1;
 				chaseSpeed = 3;
 				moveDistMin = 32;
-				moveDistMax = 96;
+				moveDistMax = 64;
 				aggroRange = 96;
 				attackRate = 1;
 				attackDamage = 3;
