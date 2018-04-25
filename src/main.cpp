@@ -611,6 +611,7 @@ void update() {
 			}
 
 			moveSpeed *= platform->timeScale;
+			chaseSpeed *= platform->timeScale;
 
 			enemy->stateTime += platform->elapsed;
 			if (enemy->state == STATE_IDLE) {
