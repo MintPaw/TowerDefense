@@ -173,6 +173,10 @@ struct Game {
 
 	Npc npcs[NPCS_MAX];
 	Text dialogText;
+
+	float timeOfDay;
+	int day;
+	Text timeText;
 };
 
 void update();
@@ -225,6 +229,7 @@ void update() {
 		game->currentInv = INV_HANDS;
 		game->gold = 300;
 		game->timeScale = 1;
+		game->day = 1;
 
 		game->player.tex = uploadPngTexturePath("assets/sprites/player.png");
 		game->tilesetTexture = uploadPngTexturePath("assets/tilesets/tileset.png");
@@ -251,6 +256,7 @@ void update() {
 		initText(&game->debugText, 1024, 256);
 		initText(&game->goldText, 512, 256);
 		initText(&game->dialogText, 512, 512);
+		initText(&game->timeText, 512, 512);
 
 		{ /// Setup map
 			void *mapData;
@@ -428,6 +434,7 @@ void update() {
 	Rect playerRect = {player->x, player->y, (float)player->tex->width, (float)player->tex->height};
 
 	float elapsed = platform->elapsed * game->timeScale;
+	game->timeOfDay += elapsed;
 
 	bool moveUp = false;
 	bool moveDown = false;
@@ -887,7 +894,6 @@ void update() {
 				"Inv: %0.2f Move: %0.2f Sele: %0.2f Spawn: %0.2f Ene: %0.2f Tur: %0.2f Bul: %0.2f Item: %0.2f Hud: %0.2f Prof: %0.2f\n"
 				"Npc: %0.2f, Dia: %0.2f\n"
 				"Time scale: %0.2f\n",
-				NULL,
 				platform->frameTime,
 				updateMs, renderMs,
 				updateInv, updateMovement, updateSelecter, updateSpawners, updateEnemies, updateTurrets, updateBullets, updateItems, updateHud, updateProfiler,
@@ -897,6 +903,7 @@ void update() {
 		}
 
 		drawText(&game->goldText, game->mainFont, "Gold: %d", game->gold);
+		drawText(&game->timeText, game->mainFont, "Day %d %d", game->day, (int)game->timeOfDay);
 	}
 	profiler->endProfile("Update Hud");
 
@@ -1060,6 +1067,15 @@ void update() {
 			def.pos.x = platform->windowWidth - game->goldText.width;
 			def.pos.y = platform->windowHeight - game->goldText.height;
 			if (notEnoughGold) def.tint = 0xFFFF0000;
+			def.scrollFactor.setTo(0, 0);
+			drawSpriteEx(&def);
+		}
+
+		{ /// Time text
+			defaultSpriteDef(&def);
+			def.tex = game->timeText.tex;
+			def.pos.x = 0;
+			def.pos.y = platform->windowHeight - game->timeText.height;
 			def.scrollFactor.setTo(0, 0);
 			drawSpriteEx(&def);
 		}
