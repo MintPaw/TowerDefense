@@ -1,8 +1,9 @@
 /*
 			TODO:
-			Make gold texture and untint
+			Make gold texture
 			Profile timing
 			Remove most of the profiling
+			Make destroyGameObject
 
 			Add bat night vision hint
 			*/
@@ -22,11 +23,10 @@
 enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
 enum SpawnerType { SPAWNER_BAT, SPAWNER_GAURD };
 enum EnemyState { STATE_IDLE=0, STATE_MOVING, STATE_CHASING, STATE_ATTACKING };
-enum ItemType { ITEM_GOLD };
 enum DayPhase { DAY_DAWN, DAY_MID, DAY_DUSK, DAY_NIGHT };
 
-enum GameObjectType { GO_NULL = 0, GO_PLAYER, GO_TURRET, GO_ENEMY, GO_BULLET };
-enum GameObjectSubType { GO_SUB_NULL = 0, GO_TURRET_BASIC, GO_ENEMY_BAT, GO_ENEMY_GAURD, GO_BULLET_BASIC };
+enum GameObjectType { GO_NULL = 0, GO_PLAYER, GO_TURRET, GO_ENEMY, GO_BULLET, GO_ITEM };
+enum GameObjectSubType { GO_SUB_NULL = 0, GO_TURRET_BASIC, GO_ENEMY_BAT, GO_ENEMY_GAURD, GO_BULLET_BASIC, GO_ITEM_GOLD };
 
 struct GameObject {
 	bool exists;
@@ -62,14 +62,6 @@ struct Npc {
 	bool exists;
 	float x;
 	float y;
-	Texture *tex;
-};
-
-struct Item {
-	bool exists;
-	float x;
-	float y;
-	float type;
 	Texture *tex;
 };
 
@@ -131,7 +123,6 @@ struct Game {
 	tinytiled_map_t *tiledMap; 
 	Texture *mapTexture;
 
-	// Turret turrets[TURRETS_MAX];
 	GameObject *selectedTurret;
 
 	InvType currentInv;
@@ -141,7 +132,6 @@ struct Game {
 
 	Rect colls[COLLS_MAX];
 	Spawner spawners[SPAWNERS_MAX];
-	Item items[ITEMS_MAX];
 
 	int gold;
 	Text goldText;
@@ -171,7 +161,7 @@ bool isPointOverColl(float px, float py);
 GameObject *getClosestGameObject(float px, float py, GameObjectType type = GO_NULL, GameObjectSubType subtype = GO_SUB_NULL);
 
 GameObject *shootBullet(float x, float y, GameObjectSubType subtype, float degrees, float startDist);
-Item *createItem(float x, float y, ItemType type);
+GameObject *createItem(float x, float y, GameObjectSubType subtype);
 
 void drawHpBar(float x, float y, float value, float total);
 
@@ -664,7 +654,7 @@ void update() {
 					for (int goldIndex = 0; goldIndex < goldGiven; goldIndex++) {
 						Point itemPoint;
 						enemyRect.randomPoint(&itemPoint);
-						createItem(itemPoint.x, itemPoint.y, ITEM_GOLD);
+						createItem(itemPoint.x, itemPoint.y, GO_ITEM_GOLD);
 					}
 					enemy->exists = false;
 				}
@@ -709,6 +699,20 @@ void update() {
 			}
 		}
 		// profiler->endProfile("Update Bullets");
+
+		// profiler->startProfile("Update Items");
+		{ /// Items
+			if (go->type == GO_ITEM) {
+				GameObject *item = go;
+
+				Rect itemRect = {item->x, item->y, (float)item->tex->width, (float)item->tex->height}; 
+				if (playerRect.intersects(&itemRect)) {
+					game->gold++;
+					item->exists = false;
+				}
+			}
+		}
+		// profiler->endProfile("Update Items");
 	}
 
 	profiler->startProfile("Update Movement");
@@ -876,21 +880,6 @@ void update() {
 	}
 	profiler->endProfile("Update Spawners");
 
-	profiler->startProfile("Update Items");
-	{ /// Items
-		for (int i = 0; i < ITEMS_MAX; i++) {
-			Item *item = &game->items[i];
-			if (!item->exists) continue;
-
-			Rect itemRect = {item->x, item->y, (float)item->tex->width, (float)item->tex->height}; 
-			if (playerRect.intersects(&itemRect)) {
-				game->gold++;
-				item->exists = false;
-			}
-		}
-	}
-	profiler->endProfile("Update Items");
-
 	profiler->startProfile("Update Npcs");
 	Npc *npcOver = NULL;
 	const char *dialog = NULL;
@@ -1009,18 +998,18 @@ void update() {
 		}
 	}
 
-	{ /// Draw items
-		for (int i = 0; i < ITEMS_MAX; i++) {
-			Item *item = &game->items[i];
-			if (!item->exists) continue;
-			defaultSpriteDef(&def);
-			def.tex = item->tex;
-			def.pos.x = item->x;
-			def.pos.y = item->y;
-			def.tint = 0xFFFF00FF;
-			drawSpriteEx(&def);
-		}
-	}
+	// { /// Draw items
+	// 	for (int i = 0; i < ITEMS_MAX; i++) {
+	// 		Item *item = &game->items[i];
+	// 		if (!item->exists) continue;
+	// 		defaultSpriteDef(&def);
+	// 		def.tex = item->tex;
+	// 		def.pos.x = item->x;
+	// 		def.pos.y = item->y;
+	// 		def.tint = 0xFFFF00FF;
+	// 		drawSpriteEx(&def);
+	// 	}
+	// }
 
 	{ /// Draw npcs
 		for (int i = 0; i < NPCS_MAX; i++) {
@@ -1326,21 +1315,17 @@ GameObject *shootBullet(float x, float y, GameObjectSubType subtype, float degre
 	return bullet;
 }
 
-Item *createItem(float x, float y, ItemType type) {
-	for (int i = 0; i < ITEMS_MAX; i++) {
-		Item *item = &game->items[i];
-		if (item->exists) continue;
-		memset(item, 0, sizeof(Item));
-		item->exists = true;
-		item->type = type;
-		item->x = x;
-		item->y = y;
-		item->tex = game->goldTexture;
+GameObject *createItem(float x, float y, GameObjectSubType subtype) {
+	//@incomplete What if there are too many game objects at this point?
 
-		return item;
-	}
+	GameObject *item = newGameObject();
+	item->type = GO_ITEM;
+	item->subtype = subtype;
+	item->x = x;
+	item->y = y;
+	item->tex = game->goldTexture;
 
-	return NULL;
+	return item;
 }
 
 bool getKeyPressed(int key) {
