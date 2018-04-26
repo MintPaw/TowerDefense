@@ -2,6 +2,7 @@
 			TODO:
 			Make gold texture and untint
 			Profile timing
+			Remove most of the profiling
 
 			Add bat night vision hint
 			*/
@@ -18,12 +19,9 @@
 #define NPCS_MAX 32
 #define GAME_OBJECTS_MAX 8192
 
-enum TurretType { TURRET_BASIC };
 enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
 enum SpawnerType { SPAWNER_BAT, SPAWNER_GAURD };
-enum EnemyType { ENEMY_BAT, ENEMY_GAURD };
 enum EnemyState { STATE_IDLE=0, STATE_MOVING, STATE_CHASING, STATE_ATTACKING };
-enum BulletType { BULLET_BASIC };
 enum ItemType { ITEM_GOLD };
 enum DayPhase { DAY_DAWN, DAY_MID, DAY_DUSK, DAY_NIGHT };
 
@@ -74,39 +72,6 @@ struct Item {
 	float type;
 	Texture *tex;
 };
-
-// struct Bullet {
-// 	bool exists;
-// 	float x;
-// 	float y;
-// 	float rotation;
-// 	float damage;
-// 	BulletType type;
-// 	Texture *tex;
-
-// 	GameObject *sourceTurret;
-// };
-
-// struct Enemy {
-// 	bool exists;
-// 	float x;
-// 	float y;
-// 	float spawnTime;
-// 	EnemyType type;
-// 	Texture *tex;
-
-// 	EnemyState state;
-// 	float stateTime;
-// 	Point nextPos;
-// 	GameObject *targetTurret;
-// 	GameObject *superAggroTurret;
-// 	bool chasingPlayer;
-// 	Rect chaseRect;
-
-// 	float hp;
-// 	float maxHp;
-// 	float attackTime;
-// };
 
 struct Spawner {
 	bool exists;
