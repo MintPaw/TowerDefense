@@ -2,6 +2,8 @@
 			TODO:
 			Refactor enemy chase stuff
 
+			Deal with there being too many game objects
+			Draw GameObject directly rather than SpriteDef
 			Profile timing
 			Remove most of the profiling
 			Make destroyGameObject
@@ -13,14 +15,9 @@
 #include "platform.h"
 #include "renderer.h"
 
-#define TURRETS_MAX 1024
 #define COLLS_MAX 1024
 #define SPAWNERS_MAX 1024
-#define ENEMY_MAX 8192
 #define ENEMIES_PER_SPAWNER_MAX 256
-#define BULLETS_MAX 2048
-#define ITEMS_MAX 2048
-#define NPCS_MAX 32
 #define GAME_OBJECTS_MAX 8192
 
 enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
@@ -60,13 +57,6 @@ struct GameObject {
 
 	float attackTime;
 };
-
-// struct Npc {
-// 	bool exists;
-// 	float x;
-// 	float y;
-// 	Texture *tex;
-// };
 
 struct Spawner {
 	bool exists;
@@ -193,6 +183,7 @@ void update() {
 		firstFrame = true;
 		game = (Game *)malloc(sizeof(Game));
 		memset(game, 0, sizeof(Game));
+		printf("Game struct size: %dkb\n", sizeof(Game)/1024);
 
 		initProfiler(&game->profiler);
 
@@ -1224,8 +1215,6 @@ GameObject *shootBullet(float x, float y, GameObjectSubType subtype, float degre
 }
 
 GameObject *createItem(float x, float y, GameObjectSubType subtype) {
-	//@incomplete What if there are too many game objects at this point?
-
 	GameObject *item = newGameObject();
 	item->type = GO_ITEM;
 	item->subtype = subtype;
