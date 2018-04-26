@@ -16,6 +16,7 @@
 #define BULLETS_MAX 2048
 #define ITEMS_MAX 2048
 #define NPCS_MAX 32
+#define GAME_OBJECTS_MAX 8192
 
 enum TurretType { TURRET_BASIC };
 enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
@@ -26,7 +27,17 @@ enum BulletType { BULLET_BASIC };
 enum ItemType { ITEM_GOLD };
 enum DayPhase { DAY_DAWN, DAY_MID, DAY_DUSK, DAY_NIGHT };
 
+enum GameObjectType { GO_PLAYER };
+
 struct Turret;
+
+struct GameObject {
+	bool exists;
+	GameObjectType type;
+	float x, y;
+	Texture *tex;
+	float hp, maxHp;
+};
 
 struct Npc {
 	bool exists;
@@ -150,7 +161,7 @@ struct Game {
 	BitmapFont *mainFont;
 	BitmapFont *smallFont;
 
-	Player player;
+	GameObject *player;
 
 	// Frame *spriteFrames;
 	// int spriteFramesNum;
@@ -182,10 +193,15 @@ struct Game {
 	float timeOfDay;
 	int day;
 	Text timeText;
+
+	GameObject gameObjects[GAME_OBJECTS_MAX];
 };
 
 void update();
 bool getKeyPressed(int key);
+
+GameObject *newGameObject();
+
 Turret *buildTurret(int x, int y, InvType type);
 
 Enemy *spawnEnemy(float x, float y, EnemyType type);
@@ -230,13 +246,14 @@ void update() {
 
 		initProfiler(&game->profiler);
 
-		game->player.maxHp = game->player.hp = 20;
+		game->player = newGameObject();
+		game->player->maxHp = game->player->hp = 20;
 		game->currentInv = INV_HANDS;
 		game->gold = 300;
 		game->timeScale = 1;
 		game->day = 1;
 
-		game->player.tex = uploadPngTexturePath("assets/sprites/player.png");
+		game->player->tex = uploadPngTexturePath("assets/sprites/player.png");
 		game->tilesetTexture = uploadPngTexturePath("assets/tilesets/tileset.png");
 
 		game->upgradeOption1Texture = uploadPngTexturePath("assets/sprites/upgradeOption1.png");
@@ -330,8 +347,8 @@ void update() {
 				layer = layer->next;
 			}
 
-			game->player.x = game->mapTexture->width/2 + game->tileSize/2 - game->player.tex->width/2;
-			game->player.y = game->mapTexture->height/2 + game->tileSize/2 - game->player.tex->height/2;
+			game->player->x = game->mapTexture->width/2 + game->tileSize/2 - game->player->tex->width/2;
+			game->player->y = game->mapTexture->height/2 + game->tileSize/2 - game->player->tex->height/2;
 		}
 
 		{ /// Parse frames
@@ -439,7 +456,7 @@ void update() {
 
 	profiler->startProfile("Update");
 
-	Player *player = &game->player;
+	GameObject *player = game->player;
 	Point playerCenter = {player->x + player->tex->width/2, player->y + player->tex->height * 0.90f};
 	Rect playerRect = {player->x, player->y, (float)player->tex->width, (float)player->tex->height};
 
@@ -537,7 +554,7 @@ void update() {
 
 	{ /// Camera
 		setCameraExtents(0, 0, game->mapTexture->width, game->mapTexture->height);
-		setCameraPosition(player->x - platform->windowWidth/2 + game->player.tex->width/2, player->y - platform->windowHeight/2 + game->player.tex->height/2);
+		setCameraPosition(player->x - platform->windowWidth/2 + player->tex->width/2, player->y - platform->windowHeight/2 + player->tex->height/2);
 	}
 
 	profiler->startProfile("Update Selecter");
@@ -1019,7 +1036,7 @@ void update() {
 
 	{ /// Draw player
 		defaultSpriteDef(&def);
-		def.tex = game->player.tex;
+		def.tex = game->player->tex;
 		def.pos.x = player->x;
 		def.pos.y = player->y;
 		drawSpriteEx(&def);
@@ -1185,6 +1202,18 @@ void update() {
 
 	swapBuffers();
 	profiler->endProfile("Render");
+}
+
+GameObject *newGameObject() {
+	for (int i = 0; i < GAME_OBJECTS_MAX; i++) {
+		GameObject *go = &game->gameObjects[i];
+		if (!go->exists) {
+			memset(go, 0, sizeof(GameObject));
+			return go;
+		}
+	}
+
+	return NULL;
 }
 
 void drawHpBar(float x, float y, float value, float total) {
