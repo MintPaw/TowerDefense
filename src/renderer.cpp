@@ -390,10 +390,18 @@ void defaultSpriteDef(SpriteDef *def) {
 	memset(def, 0, sizeof(SpriteDef));
 	def->scrollFactor.setTo(1, 1);
 	def->alpha = 1;
+	def->canCull = true;
 }
 
 void drawSpriteEx(SpriteDef *def) {
 	if (def->tex == NULL) return;
+
+	if (def->canCull && def->scrollFactor.x == 1 && def->scrollFactor.y == 1) {
+		Rect camRect = {renderer->camPos.x, renderer->camPos.y, (float)platform->windowWidth, (float)platform->windowHeight};
+		Rect spriteRect = {def->pos.x, def->pos.y, (float)def->tex->width, (float)def->tex->height};
+
+		if (!camRect.intersects(&spriteRect)) return;
+	}
 
 	setGlViewport(0, 0, platform->windowWidth, platform->windowHeight);
 	setShaderProgram(renderer->spriteProgram.program);

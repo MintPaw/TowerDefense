@@ -14,6 +14,7 @@ struct SpriteDef {
 	float rotation;
 	Point pivot;
 	float alpha;
+	bool canCull;
 };
 void initRenderer();
 void clearRenderer();
