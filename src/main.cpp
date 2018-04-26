@@ -27,16 +27,24 @@ enum BulletType { BULLET_BASIC };
 enum ItemType { ITEM_GOLD };
 enum DayPhase { DAY_DAWN, DAY_MID, DAY_DUSK, DAY_NIGHT };
 
-enum GameObjectType { GO_PLAYER };
-
-struct Turret;
+enum GameObjectType { GO_NULL = 0, GO_PLAYER, GO_TURRET };
+enum GameObjectSubType { GO_SUB_NULL = 0, GO_BASIC_TURRET };
 
 struct GameObject {
 	bool exists;
 	GameObjectType type;
-	float x, y;
+	GameObjectSubType subtype;
+	float x, y, alpha;
 	Texture *tex;
 	float hp, maxHp;
+
+	/// Turret
+	float gunRotation;
+	Texture *gunTex;
+	int turretInvestment;
+	float buildPerc;
+
+	float attackTime;
 };
 
 struct Npc {
@@ -63,7 +71,7 @@ struct Bullet {
 	BulletType type;
 	Texture *tex;
 
-	Turret *sourceTurret;
+	GameObject *sourceTurret;
 };
 
 struct Enemy {
@@ -77,8 +85,8 @@ struct Enemy {
 	EnemyState state;
 	float stateTime;
 	Point nextPos;
-	Turret *targetTurret;
-	Turret *superAggroTurret;
+	GameObject *targetTurret;
+	GameObject *superAggroTurret;
 	bool chasingPlayer;
 	Rect chaseRect;
 
@@ -99,22 +107,6 @@ struct Spawner {
 	int enemyCount;
 };
 
-struct Turret {
-	bool exists;
-	int x;
-	int y;
-	TurretType type;
-	float gunRotation;
-	Texture *baseTex;
-	Texture *gunTex;
-
-	float hp;
-	float maxHp;
-	float attackTime;
-	int invested;
-	float buildPerc;
-};
-
 // struct Frame {
 // 	char *name;
 // 	int x;
@@ -125,15 +117,6 @@ struct Turret {
 // 	int sourceHeight;
 // 	bool rotated;
 // };
-
-struct Player {
-	float x;
-	float y;
-	Texture *tex;
-
-	float hp;
-	float maxHp;
-};
 
 struct Game {
 	Profiler profiler;
@@ -170,8 +153,8 @@ struct Game {
 	tinytiled_map_t *tiledMap; 
 	Texture *mapTexture;
 
-	Turret turrets[TURRETS_MAX];
-	Turret *selectedTurret;
+	// Turret turrets[TURRETS_MAX];
+	GameObject *selectedTurret;
 
 	InvType currentInv;
 	Texture *selecterTexture;
@@ -202,14 +185,14 @@ bool getKeyPressed(int key);
 
 GameObject *newGameObject();
 
-Turret *buildTurret(int x, int y, InvType type);
+GameObject *buildTurret(int x, int y, InvType type);
 
 Enemy *spawnEnemy(float x, float y, EnemyType type);
 
-Turret *isRectOverTurret(Rect *rect);
-Turret *isPointOverTurret(float px, float py);
+GameObject *isRectOverGameObject(Rect *rect, GameObjectType type = GO_NULL, GameObjectSubType subtype = GO_SUB_NULL);
+GameObject *isPointOverGameObject(float px, float py, GameObjectType type = GO_NULL, GameObjectSubType subtype = GO_SUB_NULL);
 bool isPointOverColl(float px, float py);
-Turret *getClosestTurret(float px, float py);
+GameObject *getClosestGameObject(float px, float py, GameObjectType type = GO_NULL, GameObjectSubType subtype = GO_SUB_NULL);
 Enemy *getClosestEnemy(float px, float py);
 
 Bullet *shootBullet(float x, float y, BulletType type, float degrees, float startDist);
@@ -525,6 +508,63 @@ void update() {
 	}
 	profiler->endProfile("Update Inventory");
 
+	GameObject *hoveredTurret = NULL;
+	float turretHoveredRange = 0;
+
+	for (int goIndex = 0; goIndex < GAME_OBJECTS_MAX; goIndex++) {
+		GameObject *go = &game->gameObjects[goIndex];
+		if (!go->exists) continue;
+
+		// profiler->startProfile("Update Turrets");
+		{ /// Turrets
+			if (go->type == GO_TURRET) {
+				GameObject *turret = go;
+
+				Point turretCenter = {turret->x + (float)turret->tex->width/2, turret->y + (float)turret->tex->height/2};
+
+				float turretRange, turretRate, turretDamage;
+				if (turret->subtype == GO_BASIC_TURRET) {
+					turretRange = 320;
+					turretRate = 3;
+					turretDamage = 5;
+				}
+
+				if (turret == hoveredTurret) turretHoveredRange = turretRange;
+
+				turret->alpha = turret->buildPerc;
+				if (turret->buildPerc < 1) {
+					turret->buildPerc += 1/120.0 * game->timeScale;
+					continue;
+				}
+
+				Enemy *closestEnemy = getClosestEnemy(turretCenter.x, turretCenter.y);
+				float enemyDist = 999999;
+
+				Point enemyCenter = {};
+				if (closestEnemy) {
+					enemyCenter.setTo(closestEnemy->x + closestEnemy->tex->width/2, closestEnemy->y + closestEnemy->tex->height/2);
+					enemyDist = distanceBetween(turretCenter.x, turretCenter.y, enemyCenter.x, enemyCenter.y);
+				}
+
+				if (enemyDist < turretRange) {
+					turret->gunRotation = toDeg(radsBetween(turretCenter.x, turretCenter.y, enemyCenter.x, enemyCenter.y));
+
+					turret->attackTime += elapsed;
+					if (turret->attackTime > turretRate) {
+						Bullet *bullet = shootBullet(turretCenter.x, turretCenter.y, BULLET_BASIC, turret->gunRotation, 0);
+						bullet->sourceTurret = turret;
+						bullet->damage = turretDamage;
+						turret->attackTime = 0;
+					}
+				}
+
+				if (turret->hp <= 0) turret->exists = false;
+			}
+		}
+		// profiler->endProfile("Update Turrets");
+
+	}
+
 	profiler->startProfile("Update Movement");
 	{ /// Movement
 		Point playerMovePoint = {};
@@ -542,8 +582,8 @@ void update() {
 		bool canMoveX = true;
 		bool canMoveY = true;
 
-		if (isPointOverTurret(collX, playerCenter.y)) canMoveX = false;
-		if (isPointOverTurret(playerCenter.x, collY)) canMoveY = false;
+		if (isPointOverGameObject(collX, playerCenter.y, GO_TURRET)) canMoveX = false;
+		if (isPointOverGameObject(playerCenter.x, collY, GO_TURRET)) canMoveY = false;
 		if (isPointOverColl(collX, playerCenter.y)) canMoveX = false;
 		if (isPointOverColl(playerCenter.x, collY)) canMoveY = false;
 
@@ -565,16 +605,15 @@ void update() {
 	SpriteDef upgradeOption3;
 	SpriteDef disassembleOption;
 	bool notEnoughGold = false;
-	Turret *hoveredTurret = NULL;
 	{ /// Selecter
-		Turret *selecterOverTurret = NULL;
+		GameObject *selecterOverTurret = NULL;
 		bool selecterOverPlayer = false;
 
 		selecterPos.x = roundToNearest(platform->mouseX + renderer->camPos.x - game->selecterTexture->width/2, game->tileSize);
 		selecterPos.y = roundToNearest(platform->mouseY + renderer->camPos.y - game->selecterTexture->height/2, game->tileSize);
 
 		Rect selecterRect = {selecterPos.x, selecterPos.y, (float)game->selecterTexture->width, (float)game->selecterTexture->height};
-		selecterOverTurret = isRectOverTurret(&selecterRect);
+		selecterOverTurret = isRectOverGameObject(&selecterRect, GO_TURRET);
 
 		if (selecterRect.containsPoint(&playerCenter)) selecterOverPlayer = true;
 
@@ -597,26 +636,25 @@ void update() {
 			else selecterValid = true;
 		}
 
-
 		defaultSpriteDef(&upgradeOption1);
 		defaultSpriteDef(&upgradeOption2);
 		defaultSpriteDef(&upgradeOption3);
 		defaultSpriteDef(&disassembleOption);
 		if (game->selectedTurret) {
 			upgradeOption1.tex = game->upgradeOption1Texture;
-			upgradeOption1.pos.x = game->selectedTurret->x + game->selectedTurret->baseTex->width + 10;
+			upgradeOption1.pos.x = game->selectedTurret->x + game->selectedTurret->tex->width + 10;
 			upgradeOption1.pos.y = game->selectedTurret->y;
 
 			upgradeOption2.tex = game->upgradeOption2Texture;
-			upgradeOption2.pos.x = game->selectedTurret->x + game->selectedTurret->baseTex->width + 10;
+			upgradeOption2.pos.x = game->selectedTurret->x + game->selectedTurret->tex->width + 10;
 			upgradeOption2.pos.y = game->selectedTurret->y + (game->upgradeOption2Texture->height + 10) * 1;
 
 			upgradeOption3.tex = game->upgradeOption3Texture;
-			upgradeOption3.pos.x = game->selectedTurret->x + game->selectedTurret->baseTex->width + 10;
+			upgradeOption3.pos.x = game->selectedTurret->x + game->selectedTurret->tex->width + 10;
 			upgradeOption3.pos.y = game->selectedTurret->y + (game->upgradeOption3Texture->height + 10) * 2;
 
 			disassembleOption.tex = game->disassembleOptionTexture;
-			disassembleOption.pos.x = game->selectedTurret->x + game->selectedTurret->baseTex->width + 10;
+			disassembleOption.pos.x = game->selectedTurret->x + game->selectedTurret->tex->width + 10;
 			disassembleOption.pos.y = game->selectedTurret->y + (game->disassembleOptionTexture->height + 10) * 3;
 		}
 
@@ -632,7 +670,7 @@ void update() {
 				} else if (up2.containsPoint(worldMouse.x, worldMouse.y)) {
 				} else if (up3.containsPoint(worldMouse.x, worldMouse.y)) {
 				} else if (disass.containsPoint(worldMouse.x, worldMouse.y)) {
-					game->gold += game->selectedTurret->invested;
+					game->gold += game->selectedTurret->turretInvestment;
 					game->selectedTurret->exists = false;
 					game->selectedTurret = NULL;
 				} else {
@@ -642,8 +680,8 @@ void update() {
 
 			if (game->currentInv == INV_TURRET_BASIC) {
 				if (selecterValid) {
-					Turret *turret = buildTurret(selecterPos.x, selecterPos.y, INV_TURRET_BASIC);
-					turret->invested = turretPrice;
+					GameObject *turret = buildTurret(selecterPos.x, selecterPos.y, INV_TURRET_BASIC);
+					turret->turretInvestment = turretPrice;
 					game->gold -= turretPrice;
 				}
 			} else if (game->currentInv == INV_HANDS) {
@@ -755,12 +793,12 @@ void update() {
 
 			float playerDist = distanceBetween(enemyCenter.x, enemyCenter.y, playerCenter.x, playerCenter.y);
 
-			Turret *closestTurret = getClosestTurret(enemyCenter.x, enemyCenter.y);
+			GameObject *closestTurret = getClosestGameObject(enemyCenter.x, enemyCenter.y, GO_TURRET);
 			float turretDist = 9999999999;
 			if (closestTurret) {
 				turretDist = distanceBetween(
 					enemyCenter.x, enemyCenter.y,
-					closestTurret->x + closestTurret->baseTex->width/2, closestTurret->y + closestTurret->baseTex->height/2
+					closestTurret->x + closestTurret->tex->width/2, closestTurret->y + closestTurret->tex->height/2
 				);
 			}
 
@@ -775,7 +813,7 @@ void update() {
 				targetInRange = true;
 			} else if (turretDist < playerDist && turretDist < aggroRange) {
 				enemy->targetTurret = closestTurret;
-				enemy->chaseRect.setTo(closestTurret->x, closestTurret->y, closestTurret->baseTex->width, closestTurret->baseTex->height);
+				enemy->chaseRect.setTo(closestTurret->x, closestTurret->y, closestTurret->tex->width, closestTurret->tex->height);
 				targetInRange = true;
 			}
 
@@ -785,7 +823,7 @@ void update() {
 				} else if (!enemy->chasingPlayer && !enemy->targetTurret) {
 					targetInRange = true;
 					enemy->targetTurret = enemy->superAggroTurret;
-					enemy->chaseRect.setTo(closestTurret->x, closestTurret->y, closestTurret->baseTex->width, closestTurret->baseTex->height);
+					enemy->chaseRect.setTo(closestTurret->x, closestTurret->y, closestTurret->tex->width, closestTurret->tex->height);
 				}
 			}
 
@@ -825,54 +863,6 @@ void update() {
 		}
 	}
 	profiler->endProfile("Update Enemies");
-
-	profiler->startProfile("Update Turrets");
-	float hoveredRange;
-	{ /// Turrets
-		for (int i = 0; i < TURRETS_MAX; i++) {
-			Turret *turret = &game->turrets[i];
-			if (!turret->exists) continue;
-			Point turretCenter = {turret->x + (float)turret->baseTex->width/2, turret->y + (float)turret->baseTex->height/2};
-
-			float turretRange, turretRate, turretDamage;
-			if (turret->type == TURRET_BASIC) {
-				turretRange = 320;
-				turretRate = 3;
-				turretDamage = 5;
-			}
-
-			if (turret == hoveredTurret) hoveredRange = turretRange;
-
-			if (turret->buildPerc < 1) {
-				turret->buildPerc += 1/120.0 * game->timeScale;
-				continue;
-			}
-
-			Enemy *closestEnemy = getClosestEnemy(turretCenter.x, turretCenter.y);
-			float enemyDist = 999999;
-
-			Point enemyCenter = {};
-			if (closestEnemy) {
-				enemyCenter.setTo(closestEnemy->x + closestEnemy->tex->width/2, closestEnemy->y + closestEnemy->tex->height/2);
-				enemyDist = distanceBetween(turretCenter.x, turretCenter.y, enemyCenter.x, enemyCenter.y);
-			}
-
-			if (enemyDist < turretRange) {
-				turret->gunRotation = toDeg(radsBetween(turretCenter.x, turretCenter.y, enemyCenter.x, enemyCenter.y));
-
-				turret->attackTime += elapsed;
-				if (turret->attackTime > turretRate) {
-					Bullet *bullet = shootBullet(turretCenter.x, turretCenter.y, BULLET_BASIC, turret->gunRotation, 0);
-					bullet->sourceTurret = turret;
-					bullet->damage = turretDamage;
-					turret->attackTime = 0;
-				}
-			}
-
-			if (turret->hp <= 0) turret->exists = false;
-		}
-	}
-	profiler->endProfile("Update Turrets");
 
 	profiler->startProfile("Update Bullets");
 	{ /// Bullets
@@ -993,31 +983,28 @@ void update() {
 		drawSpriteEx(&def);
 	}
 
-	{ /// Draw turrets bases
-		for (int i = 0; i < TURRETS_MAX; i++) {
-			Turret *turret = &game->turrets[i];
-			if (!turret->exists) continue;
+	{ /// Draw game objects
+		for (int goIndex = 0; goIndex < GAME_OBJECTS_MAX; goIndex++) {
+			GameObject *go = &game->gameObjects[goIndex];
+			if (!go->exists) continue;
+	
 			defaultSpriteDef(&def);
-			def.tex = turret->baseTex;
-			def.pos.x = turret->x;
-			def.pos.y = turret->y;
-			def.alpha = turret->buildPerc;
+			def.tex = go->tex;
+			def.pos.x = go->x;
+			def.pos.y = go->y;
+			def.alpha = go->alpha;
 			drawSpriteEx(&def);
-		}
-	}
 
-	{ /// Draw turrets guns
-		for (int i = 0; i < TURRETS_MAX; i++) {
-			Turret *turret = &game->turrets[i];
-			if (!turret->exists) continue;
-			defaultSpriteDef(&def);
-			def.tex = turret->gunTex;
-			def.pos.x = turret->x + turret->baseTex->width/2 - turret->gunTex->height/2;
-			def.pos.y = turret->y + turret->baseTex->height/2 - turret->gunTex->height/2;
-			def.rotation = turret->gunRotation;
-			def.pivot.setTo(turret->gunTex->height/2, turret->gunTex->height/2);
-			def.alpha = turret->buildPerc;
-			drawSpriteEx(&def);
+			if (go->type == GO_TURRET) {
+				defaultSpriteDef(&def);
+				def.tex = go->gunTex;
+				def.pos.x = go->x + go->tex->width/2 - go->gunTex->height/2;
+				def.pos.y = go->y + go->tex->height/2 - go->gunTex->height/2;
+				def.alpha = go->alpha;
+				def.rotation = go->gunRotation;
+				def.pivot.setTo(go->gunTex->height/2, go->gunTex->height/2);
+				drawSpriteEx(&def);
+			}
 		}
 	}
 
@@ -1032,14 +1019,6 @@ void update() {
 			def.tint = 0xFFFF00FF;
 			drawSpriteEx(&def);
 		}
-	}
-
-	{ /// Draw player
-		defaultSpriteDef(&def);
-		def.tex = game->player->tex;
-		def.pos.x = player->x;
-		def.pos.y = player->y;
-		drawSpriteEx(&def);
 	}
 
 	{ /// Draw npcs
@@ -1173,9 +1152,9 @@ void update() {
 		{ /// Turret range
 			if (hoveredTurret) {
 				drawCircle(
-					hoveredTurret->x + hoveredTurret->baseTex->width/2 - renderer->camPos.x,
-					hoveredTurret->y + hoveredTurret->baseTex->height/2 - renderer->camPos.y,
-					hoveredRange * 2,
+					hoveredTurret->x + hoveredTurret->tex->width/2 - renderer->camPos.x,
+					hoveredTurret->y + hoveredTurret->tex->height/2 - renderer->camPos.y,
+					turretHoveredRange * 2,
 					0x2200FF00
 				);
 			}
@@ -1183,12 +1162,13 @@ void update() {
 	}
 
 	{ /// Draw hp bars
-		drawHpBar(player->x + player->tex->width/2, player->y + player->tex->height + 5, player->hp, player->maxHp);
+		for (int goIndex = 0; goIndex < GAME_OBJECTS_MAX; goIndex++) {
+			GameObject *go = &game->gameObjects[goIndex];
+			if (!go->exists) continue;
 
-		for (int i = 0; i < TURRETS_MAX; i++) {
-			Turret *turret = &game->turrets[i];
-			if (!turret->exists) continue;
-			drawHpBar(turret->x + turret->baseTex->width/2, turret->y + turret->baseTex->height - 10, turret->hp, turret->maxHp);
+			if (go->maxHp > 0) {
+				drawHpBar(go->x + go->tex->width/2, go->y + go->tex->height + 5, go->hp, go->maxHp);
+			}
 		}
 
 		for (int i = 0; i < ENEMY_MAX; i++) {
@@ -1209,6 +1189,8 @@ GameObject *newGameObject() {
 		GameObject *go = &game->gameObjects[i];
 		if (!go->exists) {
 			memset(go, 0, sizeof(GameObject));
+			go->exists = true;
+			go->alpha = 1;
 			return go;
 		}
 	}
@@ -1229,23 +1211,15 @@ void drawHpBar(float x, float y, float value, float total) {
 	drawRect(x - width/2 - renderer->camPos.x, y - renderer->camPos.y, value/total * width, height, 0xFF00FF00);
 }
 
-Turret *buildTurret(int x, int y, InvType type) {
-	Turret *turret = NULL;
-
-	for (int i = 0; i < TURRETS_MAX; i++) {
-		if (!game->turrets[i].exists) {
-			turret = &game->turrets[i];
-			break;
-		}
-	}
-
-	memset(turret, 0, sizeof(Turret));
-	turret->exists = true;
+GameObject *buildTurret(int x, int y, InvType type) {
+	GameObject *turret = newGameObject();
 	turret->x = x;
 	turret->y = y;
+	turret->type = GO_TURRET;
+
 	if (type == INV_TURRET_BASIC) {
-		turret->type = TURRET_BASIC;
-		turret->baseTex = game->basicTurretBaseTexture;
+		turret->subtype = GO_BASIC_TURRET;
+		turret->tex = game->basicTurretBaseTexture;
 		turret->gunTex = game->basicTurretGunTexture;
 
 		turret->maxHp = turret->hp = 100;
@@ -1282,26 +1256,31 @@ Enemy *spawnEnemy(float x, float y, EnemyType type) {
 	return NULL;
 }
 
-Turret *isRectOverTurret(Rect *rect) {
-	Rect turretRect;
-	for (int i = 0; i < TURRETS_MAX; i++) {
-		Turret *turret = &game->turrets[i];
-		if (!turret->exists) continue;
-		turretRect.setTo(turret->x, turret->y, turret->baseTex->width, turret->baseTex->height);
+GameObject *isRectOverGameObject(Rect *rect, GameObjectType type, GameObjectSubType subtype) {
+	Rect otherRect;
+	for (int i = 0; i < GAME_OBJECTS_MAX; i++) {
+		GameObject *go = &game->gameObjects[i];
+		if (!go->exists) continue;
+		if (type && go->type != type) continue;
+		if (subtype && go->subtype != subtype) continue;
+		otherRect.setTo(go->x, go->y, go->tex->width, go->tex->height);
 
-		if (turretRect.intersects(rect)) return turret;
+		if (otherRect.intersects(rect)) return go;
 	}
 
 	return NULL;
 }
 
-Turret *isPointOverTurret(float px, float py) {
-	Rect turretRect;
-	for (int i = 0; i < TURRETS_MAX; i++) {
-		Turret *turret = &game->turrets[i];
-		if (!turret->exists) continue;
-		turretRect.setTo(turret->x, turret->y, turret->baseTex->width, turret->baseTex->height);
-		if (turretRect.containsPoint(px, py)) return turret;
+GameObject *isPointOverGameObject(float px, float py, GameObjectType type, GameObjectSubType subtype) {
+	Rect otherRect;
+	for (int i = 0; i < GAME_OBJECTS_MAX; i++) {
+		GameObject *go = &game->gameObjects[i];
+		if (!go->exists) continue;
+		if (type && go->type != type) continue;
+		if (subtype && go->subtype != subtype) continue;
+		otherRect.setTo(go->x, go->y, go->tex->width, go->tex->height);
+
+		if (otherRect.containsPoint(px, py)) return go;
 	}
 
 	return NULL;
@@ -1318,17 +1297,18 @@ bool isPointOverColl(float px, float py) {
 	return false;
 }
 
-Turret *getClosestTurret(float px, float py) {
-	Turret *closest = NULL;
+GameObject *getClosestGameObject(float px, float py, GameObjectType type, GameObjectSubType subtype) {
+	GameObject *closest = NULL;
 	float dist = 0;
 
-	for (int i = 0; i < TURRETS_MAX; i++) {
-		Turret *turret = &game->turrets[i];
-		if (!turret->exists) continue;
-		float curDist = distanceBetween(px, py, turret->x + turret->baseTex->width/2, turret->y + turret->baseTex->height/2);
+	for (int i = 0; i < GAME_OBJECTS_MAX; i++) {
+		GameObject *go = &game->gameObjects[i];
+		if (!go->exists) continue;
+
+		float curDist = distanceBetween(px, py, go->x + go->tex->width/2, go->y + go->tex->height/2);
 		if (curDist < dist || closest == NULL) {
 			dist = curDist;
-			closest = turret;
+			closest = go;
 		}
 	}
 
@@ -1339,7 +1319,7 @@ Enemy *getClosestEnemy(float px, float py) {
 	Enemy *closest = NULL;
 	float dist = 0;
 
-	for (int i = 0; i < TURRETS_MAX; i++) {
+	for (int i = 0; i < ENEMY_MAX; i++) {
 		Enemy *enemy = &game->enemies[i];
 		if (!enemy->exists) continue;
 		float curDist = distanceBetween(px, py, enemy->x + enemy->tex->width/2, enemy->y + enemy->tex->height/2);
