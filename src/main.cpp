@@ -25,8 +25,8 @@ enum SpawnerType { SPAWNER_BAT, SPAWNER_GAURD };
 enum EnemyState { STATE_IDLE=0, STATE_MOVING, STATE_CHASING, STATE_ATTACKING };
 enum DayPhase { DAY_DAWN, DAY_MID, DAY_DUSK, DAY_NIGHT };
 
-enum GameObjectType { GO_NULL = 0, GO_PLAYER, GO_TURRET, GO_ENEMY, GO_BULLET, GO_ITEM };
-enum GameObjectSubType { GO_SUB_NULL = 0, GO_TURRET_BASIC, GO_ENEMY_BAT, GO_ENEMY_GAURD, GO_BULLET_BASIC, GO_ITEM_GOLD };
+enum GameObjectType { GO_NULL = 0, GO_PLAYER, GO_TURRET, GO_ENEMY, GO_BULLET, GO_ITEM, GO_NPC };
+enum GameObjectSubType { GO_SUB_NULL = 0, GO_TURRET_BASIC, GO_ENEMY_BAT, GO_ENEMY_GAURD, GO_BULLET_BASIC, GO_ITEM_GOLD, GO_NPC_OLD_MAN };
 
 struct GameObject {
 	bool exists;
@@ -58,12 +58,12 @@ struct GameObject {
 	float attackTime;
 };
 
-struct Npc {
-	bool exists;
-	float x;
-	float y;
-	Texture *tex;
-};
+// struct Npc {
+// 	bool exists;
+// 	float x;
+// 	float y;
+// 	Texture *tex;
+// };
 
 struct Spawner {
 	bool exists;
@@ -136,7 +136,6 @@ struct Game {
 	int gold;
 	Text goldText;
 
-	Npc npcs[NPCS_MAX];
 	Text dialogText;
 
 	float timeOfDay;
@@ -277,15 +276,12 @@ void update() {
 								break;
 							}
 						} else if (streq(object->name.ptr, "oldManNpc")) {
-							for (int i = 0; i < NPCS_MAX; i++) {
-								Npc *npc = &game->npcs[i];
-								if (npc->exists) continue;
-								memset(npc, 0, sizeof(Npc));
-								npc->exists = true;
-								npc->x = object->x;
-								npc->y = object->y;
-								npc->tex = game->oldManNpcTexture;
-							}
+							GameObject *npc = newGameObject();
+							npc->type = GO_NPC;
+							npc->subtype = GO_NPC_OLD_MAN;
+							npc->x = object->x;
+							npc->y = object->y;
+							npc->tex = game->oldManNpcTexture;
 						}
 					}
 
@@ -473,10 +469,11 @@ void update() {
 	}
 	profiler->endProfile("Update Inventory");
 
+	/// Update game objects
 	GameObject *hoveredTurret = NULL;
 	float turretHoveredRange = 0;
-
-	/// Update game objects
+	GameObject *npcOver = NULL;
+	const char *dialog = NULL;
 	for (int goIndex = 0; goIndex < GAME_OBJECTS_MAX; goIndex++) {
 		GameObject *go = &game->gameObjects[goIndex];
 		if (!go->exists) continue;
@@ -713,6 +710,21 @@ void update() {
 			}
 		}
 		// profiler->endProfile("Update Items");
+
+		// profiler->startProfile("Update Npcs");
+		{ /// Npcs
+			if (go->type == GO_NPC) {
+				GameObject *npc = go;
+
+				Rect npcRect = {npc->x, npc->y, (float)npc->tex->width, (float)npc->tex->height};
+				if (playerRect.intersects(&npcRect)) {
+					npcOver = npc;
+					//@incomplete if the npc is the old man...
+					dialog = "Did you know you can press Q and E to change your current item?\n\nCome back later for another tip...";
+				}
+			}
+		}
+		// profiler->endProfile("Update Npcs");
 	}
 
 	profiler->startProfile("Update Movement");
@@ -880,23 +892,6 @@ void update() {
 	}
 	profiler->endProfile("Update Spawners");
 
-	profiler->startProfile("Update Npcs");
-	Npc *npcOver = NULL;
-	const char *dialog = NULL;
-	{ /// Npcs
-		for (int i = 0; i < NPCS_MAX; i++) {
-			Npc *npc = &game->npcs[i];
-			if (!npc->exists) continue;
-
-			Rect npcRect = {npc->x, npc->y, (float)npc->tex->width, (float)npc->tex->height};
-			if (playerRect.intersects(&npcRect)) {
-				npcOver = npc;
-				dialog = "Did you know you can press Q and E to change your current item?\n\nCome back later for another tip...";
-			}
-		}
-	}
-	profiler->endProfile("Update Npcs");
-
 	profiler->startProfile("Update Dialog");
 	{ /// Dialog
 		if (dialog) {
@@ -1011,18 +1006,18 @@ void update() {
 	// 	}
 	// }
 
-	{ /// Draw npcs
-		for (int i = 0; i < NPCS_MAX; i++) {
-			Npc *npc = &game->npcs[i];
-			if (!npc->exists) continue;
+	// { /// Draw npcs
+	// 	for (int i = 0; i < NPCS_MAX; i++) {
+	// 		Npc *npc = &game->npcs[i];
+	// 		if (!npc->exists) continue;
 
-			defaultSpriteDef(&def);
-			def.tex = npc->tex;
-			def.pos.x = npc->x;
-			def.pos.y = npc->y;
-			drawSpriteEx(&def);
-		}
-	}
+	// 		defaultSpriteDef(&def);
+	// 		def.tex = npc->tex;
+	// 		def.pos.x = npc->x;
+	// 		def.pos.y = npc->y;
+	// 		drawSpriteEx(&def);
+	// 	}
+	// }
 
 	// { /// Draw enemies
 	// 	for (int i = 0; i < ENEMY_MAX; i++) {
