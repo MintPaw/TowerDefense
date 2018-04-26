@@ -19,8 +19,8 @@
 
 enum TurretType { TURRET_BASIC };
 enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
-enum SpawnerType { SPAWNER_BATS };
-enum EnemyType { ENEMY_BAT };
+enum SpawnerType { SPAWNER_BAT, SPAWNER_GAURD };
+enum EnemyType { ENEMY_BAT, ENEMY_GAURD };
 enum EnemyState { STATE_IDLE=0, STATE_MOVING, STATE_CHASING, STATE_ATTACKING };
 enum BulletType { BULLET_BASIC };
 enum ItemType { ITEM_GOLD };
@@ -139,6 +139,7 @@ struct Game {
 	Texture *disassembleOptionTexture;
 
 	Texture *enemyBatTexture;
+	Texture *enemyGaurdTexture;
 
 	Texture *bulletBasicTexture;
 
@@ -247,6 +248,7 @@ void update() {
 		game->basicTurretGunTexture = uploadPngTexturePath("assets/sprites/basicTurretGun.png");
 
 		game->enemyBatTexture = uploadPngTexturePath("assets/sprites/enemyBat.png");
+		game->enemyGaurdTexture = uploadPngTexturePath("assets/sprites/enemyGaurd.png");
 
 		game->bulletBasicTexture = uploadPngTexturePath("assets/sprites/bulletBasic.png");
 
@@ -294,6 +296,10 @@ void update() {
 								memset(spawner, 0, sizeof(Spawner));
 								spawner->exists = true;
 								spawner->rect.setTo(object->x, object->y, object->width, object->height);
+
+								if (streq(object->type.ptr, "bat")) spawner->type = SPAWNER_BAT;
+								if (streq(object->type.ptr, "gaurd")) spawner->type = SPAWNER_GAURD;
+
 								for (int j = 0; j < object->property_count; j++) {
 									tinytiled_property_t *prop = &object->properties[j];
 									float value;
@@ -641,7 +647,10 @@ void update() {
 			if (spawner->timeLeft <= 0 && spawner->enemyCount < spawner->max) {
 				Point spawnPoint;
 				spawner->rect.randomPoint(&spawnPoint);
-				Enemy *enemy = spawnEnemy(spawnPoint.x, spawnPoint.y, ENEMY_BAT);
+				Enemy *enemy;
+
+				if (spawner->type == SPAWNER_BAT) enemy = spawnEnemy(spawnPoint.x, spawnPoint.y, ENEMY_BAT);
+				if (spawner->type == SPAWNER_GAURD) enemy = spawnEnemy(spawnPoint.x, spawnPoint.y, ENEMY_GAURD);
 
 				for (int j = 0; j < ENEMIES_PER_SPAWNER_MAX; j++) {
 					if (!spawner->enemies[j]) {
@@ -689,6 +698,18 @@ void update() {
 				attackRate = 1;
 				attackDamage = 3;
 				goldGiven = 10;
+			} else if (enemy->type == ENEMY_GAURD) {
+				idleLimit = 10;
+				moveSpeed = 0.3;
+				chaseSpeed = 0.5;
+				moveDistMin = 8;
+				moveDistMax = 16;
+
+				aggroRange = 32*3;
+
+				attackRate = 3;
+				attackDamage = 2;
+				goldGiven = 30;
 			}
 
 			moveSpeed *= game->timeScale;
@@ -864,6 +885,7 @@ void update() {
 					bullet->exists = false;
 					if (!enemy->superAggroTurret) enemy->superAggroTurret = bullet->sourceTurret;
 					enemy->hp -= bullet->damage;
+					break;
 				}
 			}
 		}
@@ -1166,10 +1188,16 @@ void update() {
 }
 
 void drawHpBar(float x, float y, float value, float total) {
-	float width = total/1.5;
+	float width = total;
+	float height = 1;
 
-	drawRect(x - width/2 - renderer->camPos.x, y - renderer->camPos.y, width, 1, 0xFFFF0000);
-	drawRect(x - width/2 - renderer->camPos.x, y - renderer->camPos.y, value/total * width, 1, 0xFF00FF00);
+	while (width > 80) {
+		width -= 25;
+		height += 1;
+	}
+
+	drawRect(x - width/2 - renderer->camPos.x, y - renderer->camPos.y, width, height, 0xFFFF0000);
+	drawRect(x - width/2 - renderer->camPos.x, y - renderer->camPos.y, value/total * width, height, 0xFF00FF00);
 }
 
 Turret *buildTurret(int x, int y, InvType type) {
@@ -1208,6 +1236,11 @@ Enemy *spawnEnemy(float x, float y, EnemyType type) {
 		if (type == ENEMY_BAT) {
 			enemy->tex = game->enemyBatTexture;
 			enemy->maxHp = enemy->hp = 20;
+		}
+
+		if (type == ENEMY_GAURD) {
+			enemy->tex = game->enemyGaurdTexture;
+			enemy->maxHp = enemy->hp = 200;
 		}
 
 		enemy->x = x - enemy->tex->width/2;
