@@ -2,6 +2,8 @@
 			TODO:
 			Make gold texture and untint
 			Profile timing
+
+			Add bat night vision hint
 			*/
 #include "platform.h"
 #include "renderer.h"
@@ -680,7 +682,10 @@ void update() {
 				chaseSpeed = 3;
 				moveDistMin = 32;
 				moveDistMax = 64;
-				aggroRange = 96;
+
+				if (dayPhase == DAY_NIGHT) aggroRange = 32*6;
+				else aggroRange = 32*3;
+
 				attackRate = 1;
 				attackDamage = 3;
 				goldGiven = 10;
