@@ -1,9 +1,12 @@
 /*
 			TODO:
-			Make gold texture
+			Refactor enemy chase stuff
+
 			Profile timing
 			Remove most of the profiling
 			Make destroyGameObject
+
+			Make gold texture
 
 			Add bat night vision hint
 			*/
@@ -478,7 +481,6 @@ void update() {
 		GameObject *go = &game->gameObjects[goIndex];
 		if (!go->exists) continue;
 
-		// profiler->startProfile("Update Turrets");
 		{ /// Turrets
 			if (go->type == GO_TURRET) {
 				GameObject *turret = go;
@@ -524,9 +526,7 @@ void update() {
 				if (turret->hp <= 0) turret->exists = false;
 			}
 		}
-		// profiler->endProfile("Update Turrets");
 
-		// profiler->startProfile("Update Enemies");
 		{ /// Enemies
 			if (go->type == GO_ENEMY) {
 				GameObject *enemy = go;
@@ -657,9 +657,7 @@ void update() {
 				}
 			}
 		}
-		// profiler->endProfile("Update Enemies");
 
-		// profiler->startProfile("Update Bullets");
 		{ /// Bullets
 			if (go->type == GO_BULLET) {
 				GameObject *bullet = go;
@@ -695,9 +693,7 @@ void update() {
 				}
 			}
 		}
-		// profiler->endProfile("Update Bullets");
 
-		// profiler->startProfile("Update Items");
 		{ /// Items
 			if (go->type == GO_ITEM) {
 				GameObject *item = go;
@@ -709,9 +705,7 @@ void update() {
 				}
 			}
 		}
-		// profiler->endProfile("Update Items");
 
-		// profiler->startProfile("Update Npcs");
 		{ /// Npcs
 			if (go->type == GO_NPC) {
 				GameObject *npc = go;
@@ -724,7 +718,6 @@ void update() {
 				}
 			}
 		}
-		// profiler->endProfile("Update Npcs");
 	}
 
 	profiler->startProfile("Update Movement");
@@ -991,86 +984,6 @@ void update() {
 				drawSpriteEx(&def);
 			}
 		}
-	}
-
-	// { /// Draw items
-	// 	for (int i = 0; i < ITEMS_MAX; i++) {
-	// 		Item *item = &game->items[i];
-	// 		if (!item->exists) continue;
-	// 		defaultSpriteDef(&def);
-	// 		def.tex = item->tex;
-	// 		def.pos.x = item->x;
-	// 		def.pos.y = item->y;
-	// 		def.tint = 0xFFFF00FF;
-	// 		drawSpriteEx(&def);
-	// 	}
-	// }
-
-	// { /// Draw npcs
-	// 	for (int i = 0; i < NPCS_MAX; i++) {
-	// 		Npc *npc = &game->npcs[i];
-	// 		if (!npc->exists) continue;
-
-	// 		defaultSpriteDef(&def);
-	// 		def.tex = npc->tex;
-	// 		def.pos.x = npc->x;
-	// 		def.pos.y = npc->y;
-	// 		drawSpriteEx(&def);
-	// 	}
-	// }
-
-	// { /// Draw enemies
-	// 	for (int i = 0; i < ENEMY_MAX; i++) {
-	// 		Enemy *enemy = &game->enemies[i];
-	// 		if (!enemy->exists) continue;
-	// 		defaultSpriteDef(&def);
-	// 		def.tex = enemy->tex;
-	// 		def.pos.x = enemy->x;
-	// 		def.pos.y = enemy->y;
-
-	// 		if (enemy->type == ENEMY_BAT) {
-	// 			float floatSpeedX;
-	// 			float floatSpeedY;
-	// 			float floatDistX;
-	// 			float floatDistY;
-
-	// 			if (enemy->state == STATE_ATTACKING) {
-	// 				floatSpeedX = 20;
-	// 				floatSpeedY = 10;
-	// 				floatDistX = 3;
-	// 				floatDistY = 3;
-	// 			} else {
-	// 				floatSpeedX = 0;
-	// 				floatSpeedY = 2;
-	// 				floatDistX = 0;
-	// 				floatDistY = 3;
-	// 			}
-
-	// 			def.pos.x += cos((platform->time - enemy->spawnTime)*floatSpeedX) * floatDistX;
-	// 			def.pos.y += cos((platform->time - enemy->spawnTime)*floatSpeedY) * floatDistY;
-	// 		}
-
-	// 		if (enemy->state == STATE_CHASING) {
-	// 			def.tint = 0x88FF0000;
-	// 		}
-
-	// 		drawSpriteEx(&def);
-	// 	}
-	// }
-
-	{ /// Draw bullets
-		// for (int i = 0; i < BULLETS_MAX; i++) {
-		// 	Bullet *bullet = &game->bullets[i];
-		// 	if (!bullet->exists) continue;
-		// 	defaultSpriteDef(&def);
-		// 	def.tex = bullet->tex;
-		// 	def.pos.x = bullet->x;
-		// 	def.pos.y = bullet->y;
-		// 	def.pivot.x = bullet->tex->width/2;
-		// 	def.pivot.y = bullet->tex->height/2;
-		// 	def.rotation = bullet->rotation;
-		// 	drawSpriteEx(&def);
-		// }
 	}
 
 	{ /// Draw selecter
