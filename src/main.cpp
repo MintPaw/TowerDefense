@@ -354,31 +354,23 @@ void update() {
 	float updateMs;
 	float renderMs;
 
+	float updateGameObjects;
 	float updateInv;
 	float updateMovement;
 	float updateSelecter;
 	float updateSpawners;
-	float updateEnemies;
-	float updateTurrets;
-	float updateBullets;
-	float updateItems;
 	float updateHud;
 	float updateProfiler;
-	float updateNpcs;
 	float updateDialog;
 	{ /// Profiler
 		updateMs = profiler->getAverage("Update");
 		renderMs = profiler->getAverage("Render");
+		updateGameObjects = profiler->getAverage("Update GameObjects");
 		updateInv = profiler->getAverage("Update Inventory");
 		updateMovement = profiler->getAverage("Update Movement");
 		updateSelecter = profiler->getAverage("Update Selecter");
 		updateSpawners = profiler->getAverage("Update Spawners");
-		updateEnemies = profiler->getAverage("Update Enemies");
-		updateTurrets = profiler->getAverage("Update Turrets");
-		updateBullets = profiler->getAverage("Update Bullets");
-		updateItems = profiler->getAverage("Update Items");
 		updateHud = profiler->getAverage("Update Hud");
-		updateNpcs = profiler->getAverage("Update Npcs");
 		updateDialog = profiler->getAverage("Update Dialog");
 
 		profiler->endProfile("Update Profiler");
@@ -463,6 +455,7 @@ void update() {
 	}
 	profiler->endProfile("Update Inventory");
 
+	profiler->startProfile("Update GameObjects");
 	/// Update game objects
 	GameObject *hoveredTurret = NULL;
 	float turretHoveredRange = 0;
@@ -710,6 +703,7 @@ void update() {
 			}
 		}
 	}
+	profiler->endProfile("Update GameObjects");
 
 	profiler->startProfile("Update Movement");
 	{ /// Movement
@@ -892,13 +886,13 @@ void update() {
 				game->smallFont,
 				"Frame time: %d\n"
 				"Update: %0.2f Render: %0.2f\n"
-				"Inv: %0.2f Move: %0.2f Sele: %0.2f Spawn: %0.2f Ene: %0.2f Tur: %0.2f Bul: %0.2f Item: %0.2f Hud: %0.2f Prof: %0.2f\n"
-				"Npc: %0.2f, Dia: %0.2f\n"
+				"Obj: %0.2f, Inv: %0.2f Move: %0.2f Sele: %0.2f Spawn: %0.2f Hud: %0.2f Prof: %0.2f\n"
+				"Dia: %0.2f\n"
 				"Time scale: %0.2f\n",
 				platform->frameTime,
 				updateMs, renderMs,
-				updateInv, updateMovement, updateSelecter, updateSpawners, updateEnemies, updateTurrets, updateBullets, updateItems, updateHud, updateProfiler,
-				updateNpcs, updateDialog,
+				updateGameObjects, updateInv, updateMovement, updateSelecter, updateSpawners, updateHud, updateProfiler,
+				updateDialog,
 				game->timeScale
 			);
 		}
