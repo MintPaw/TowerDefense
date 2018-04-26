@@ -27,8 +27,8 @@ enum BulletType { BULLET_BASIC };
 enum ItemType { ITEM_GOLD };
 enum DayPhase { DAY_DAWN, DAY_MID, DAY_DUSK, DAY_NIGHT };
 
-enum GameObjectType { GO_NULL = 0, GO_PLAYER, GO_TURRET };
-enum GameObjectSubType { GO_SUB_NULL = 0, GO_BASIC_TURRET };
+enum GameObjectType { GO_NULL = 0, GO_PLAYER, GO_TURRET, GO_ENEMY };
+enum GameObjectSubType { GO_SUB_NULL = 0, GO_BASIC_TURRET, GO_ENEMY_BAT, GO_ENEMY_GAURD };
 
 struct GameObject {
 	bool exists;
@@ -43,6 +43,15 @@ struct GameObject {
 	Texture *gunTex;
 	int turretInvestment;
 	float buildPerc;
+
+	/// Enemy
+	EnemyState state;
+	float spawnTime, stateTime;
+	Point nextPos;
+	GameObject *targetTurret;
+	GameObject *superAggroTurret;
+	bool chasingPlayer;
+	Rect chaseRect;
 
 	float attackTime;
 };
@@ -74,26 +83,26 @@ struct Bullet {
 	GameObject *sourceTurret;
 };
 
-struct Enemy {
-	bool exists;
-	float x;
-	float y;
-	float spawnTime;
-	EnemyType type;
-	Texture *tex;
+// struct Enemy {
+// 	bool exists;
+// 	float x;
+// 	float y;
+// 	float spawnTime;
+// 	EnemyType type;
+// 	Texture *tex;
 
-	EnemyState state;
-	float stateTime;
-	Point nextPos;
-	GameObject *targetTurret;
-	GameObject *superAggroTurret;
-	bool chasingPlayer;
-	Rect chaseRect;
+// 	EnemyState state;
+// 	float stateTime;
+// 	Point nextPos;
+// 	GameObject *targetTurret;
+// 	GameObject *superAggroTurret;
+// 	bool chasingPlayer;
+// 	Rect chaseRect;
 
-	float hp;
-	float maxHp;
-	float attackTime;
-};
+// 	float hp;
+// 	float maxHp;
+// 	float attackTime;
+// };
 
 struct Spawner {
 	bool exists;
@@ -103,7 +112,7 @@ struct Spawner {
 	int max;
 
 	float timeLeft;
-	Enemy *enemies[ENEMIES_PER_SPAWNER_MAX];
+	GameObject *enemies[ENEMIES_PER_SPAWNER_MAX];
 	int enemyCount;
 };
 
@@ -163,7 +172,6 @@ struct Game {
 
 	Rect colls[COLLS_MAX];
 	Spawner spawners[SPAWNERS_MAX];
-	Enemy enemies[ENEMY_MAX];
 	Bullet bullets[BULLETS_MAX];
 	Item items[ITEMS_MAX];
 
@@ -187,13 +195,12 @@ GameObject *newGameObject();
 
 GameObject *buildTurret(int x, int y, InvType type);
 
-Enemy *spawnEnemy(float x, float y, EnemyType type);
+GameObject *spawnEnemy(float x, float y, GameObjectSubType type);
 
 GameObject *isRectOverGameObject(Rect *rect, GameObjectType type = GO_NULL, GameObjectSubType subtype = GO_SUB_NULL);
 GameObject *isPointOverGameObject(float px, float py, GameObjectType type = GO_NULL, GameObjectSubType subtype = GO_SUB_NULL);
 bool isPointOverColl(float px, float py);
 GameObject *getClosestGameObject(float px, float py, GameObjectType type = GO_NULL, GameObjectSubType subtype = GO_SUB_NULL);
-Enemy *getClosestEnemy(float px, float py);
 
 Bullet *shootBullet(float x, float y, BulletType type, float degrees, float startDist);
 Item *createItem(float x, float y, ItemType type);
@@ -537,7 +544,7 @@ void update() {
 					continue;
 				}
 
-				Enemy *closestEnemy = getClosestEnemy(turretCenter.x, turretCenter.y);
+				GameObject *closestEnemy = getClosestGameObject(turretCenter.x, turretCenter.y, GO_ENEMY);
 				float enemyDist = 999999;
 
 				Point enemyCenter = {};
@@ -562,6 +569,139 @@ void update() {
 			}
 		}
 		// profiler->endProfile("Update Turrets");
+
+		// profiler->startProfile("Update Enemies");
+		{ /// Enemies
+			if (go->type == GO_ENEMY) {
+				GameObject *enemy = go;
+
+				Point enemyCenter = {enemy->x + enemy->tex->width/2, enemy->y + enemy->tex->height/2};
+				Rect enemyRect = {enemy->x, enemy->y, (float)enemy->tex->width, (float)enemy->tex->height};
+
+				float idleLimit, moveSpeed, chaseSpeed, moveDistMin, moveDistMax, aggroRange, attackRate, attackDamage, goldGiven;
+				if (enemy->subtype == GO_ENEMY_BAT) {
+					idleLimit = 3;
+					moveSpeed = 1;
+					chaseSpeed = 3;
+					moveDistMin = 32;
+					moveDistMax = 64;
+
+					if (dayPhase == DAY_NIGHT) aggroRange = 32*6;
+					else aggroRange = 32*3;
+
+					attackRate = 1;
+					attackDamage = 3;
+					goldGiven = 10;
+				} else if (enemy->subtype == GO_ENEMY_GAURD) {
+					idleLimit = 10;
+					moveSpeed = 0.3;
+					chaseSpeed = 0.5;
+					moveDistMin = 8;
+					moveDistMax = 16;
+
+					aggroRange = 32*3;
+
+					attackRate = 3;
+					attackDamage = 2;
+					goldGiven = 30;
+				}
+
+				moveSpeed *= game->timeScale;
+				chaseSpeed *= game->timeScale;
+
+				enemy->stateTime += elapsed;
+				if (enemy->state == STATE_IDLE) {
+					if (enemy->stateTime > idleLimit) {
+						enemy->state = STATE_MOVING;
+						enemy->stateTime = 0;
+						enemy->nextPos.x = enemyCenter.x + (rndFloat(moveDistMin, moveDistMax) * (rnd() > 0.5 ? -1 : 1));
+						enemy->nextPos.y = enemyCenter.y + (rndFloat(moveDistMin, moveDistMax) * (rnd() > 0.5 ? -1 : 1));
+					}
+				}
+
+				if (enemy->state == STATE_MOVING) {
+					float angle = radsBetween(enemyCenter.x, enemyCenter.y, enemy->nextPos.x, enemy->nextPos.y);
+					enemy->x += cos(angle) * moveSpeed;
+					enemy->y += sin(angle) * moveSpeed;
+
+					if (distanceBetween(enemyCenter.x, enemyCenter.y, enemy->nextPos.x, enemy->nextPos.y) < 10) {
+						enemy->state = STATE_IDLE;
+						enemy->stateTime = 0;
+					}
+				}
+
+				float playerDist = distanceBetween(enemyCenter.x, enemyCenter.y, playerCenter.x, playerCenter.y);
+
+				GameObject *closestTurret = getClosestGameObject(enemyCenter.x, enemyCenter.y, GO_TURRET);
+				float turretDist = 9999999999;
+				if (closestTurret) {
+					turretDist = distanceBetween(
+						enemyCenter.x, enemyCenter.y,
+						closestTurret->x + closestTurret->tex->width/2, closestTurret->y + closestTurret->tex->height/2
+					);
+				}
+
+				//@cleanup Do these vars even need to be inside the enemy struct? Same with chaseRect
+				enemy->chasingPlayer = false;
+				enemy->targetTurret = NULL;
+
+				bool targetInRange = false;
+				if (playerDist < turretDist && playerDist < aggroRange) {
+					enemy->chasingPlayer = true;
+					enemy->chaseRect.setTo(player->x, player->y, player->tex->width, player->tex->height);
+					targetInRange = true;
+				} else if (turretDist < playerDist && turretDist < aggroRange) {
+					enemy->targetTurret = closestTurret;
+					enemy->chaseRect.setTo(closestTurret->x, closestTurret->y, closestTurret->tex->width, closestTurret->tex->height);
+					targetInRange = true;
+				}
+
+				if (enemy->superAggroTurret) {
+					if (!enemy->superAggroTurret->exists) {
+						enemy->superAggroTurret = NULL;
+					} else if (!enemy->chasingPlayer && !enemy->targetTurret) {
+						targetInRange = true;
+						enemy->targetTurret = enemy->superAggroTurret;
+						enemy->chaseRect.setTo(closestTurret->x, closestTurret->y, closestTurret->tex->width, closestTurret->tex->height);
+					}
+				}
+
+				if (targetInRange) {
+					enemy->state = STATE_CHASING;
+					if (enemyRect.intersects(&enemy->chaseRect)) {
+						enemy->state = STATE_ATTACKING;
+					} else {
+						Point chaseCenter = {enemy->chaseRect.x + enemy->chaseRect.width/2, enemy->chaseRect.y + enemy->chaseRect.height/2};
+						float angle = radsBetween(enemyCenter.x, enemyCenter.y, chaseCenter.x, chaseCenter.y);
+						enemy->x += cos(angle) * chaseSpeed;
+						enemy->y += sin(angle) * chaseSpeed;
+					}
+				}
+
+				if (!targetInRange && (enemy->state == STATE_CHASING || enemy->state == STATE_ATTACKING)) {
+					enemy->state = STATE_IDLE;
+				}
+
+				if (enemy->state == STATE_ATTACKING) {
+					enemy->attackTime += elapsed;
+					if (enemy->attackTime > attackRate) {
+						if (enemy->chasingPlayer) player->hp -= attackDamage;
+						if (enemy->targetTurret) enemy->targetTurret->hp -= attackDamage;
+						enemy->attackTime = 0;
+					}
+				}
+
+				if (enemy->hp <= 0) {
+					for (int goldIndex = 0; goldIndex < goldGiven; goldIndex++) {
+						Point itemPoint;
+						enemyRect.randomPoint(&itemPoint);
+						createItem(itemPoint.x, itemPoint.y, ITEM_GOLD);
+					}
+					enemy->exists = false;
+				}
+			}
+		}
+		// profiler->endProfile("Update Enemies");
 
 	}
 
@@ -702,10 +842,10 @@ void update() {
 			if (spawner->timeLeft <= 0 && spawner->enemyCount < spawner->max) {
 				Point spawnPoint;
 				spawner->rect.randomPoint(&spawnPoint);
-				Enemy *enemy;
+				GameObject *enemy;
 
-				if (spawner->type == SPAWNER_BAT) enemy = spawnEnemy(spawnPoint.x, spawnPoint.y, ENEMY_BAT);
-				if (spawner->type == SPAWNER_GAURD) enemy = spawnEnemy(spawnPoint.x, spawnPoint.y, ENEMY_GAURD);
+				if (spawner->type == SPAWNER_BAT) enemy = spawnEnemy(spawnPoint.x, spawnPoint.y, GO_ENEMY_BAT);
+				if (spawner->type == SPAWNER_GAURD) enemy = spawnEnemy(spawnPoint.x, spawnPoint.y, GO_ENEMY_GAURD);
 
 				for (int j = 0; j < ENEMIES_PER_SPAWNER_MAX; j++) {
 					if (!spawner->enemies[j]) {
@@ -719,7 +859,7 @@ void update() {
 			}
 
 			for (int j = 0; j < ENEMIES_PER_SPAWNER_MAX; j++) {
-				Enemy *enemy = spawner->enemies[j];
+				GameObject *enemy = spawner->enemies[j];
 
 				if (enemy && !enemy->exists) {
 					spawner->enemies[j] = NULL;
@@ -730,139 +870,6 @@ void update() {
 	}
 	profiler->endProfile("Update Spawners");
 
-	profiler->startProfile("Update Enemies");
-	{ /// Enemies
-		for (int i = 0; i < ENEMY_MAX; i++) {
-			Enemy *enemy = &game->enemies[i];
-			if (!enemy->exists) continue;
-
-			Point enemyCenter = {enemy->x + enemy->tex->width/2, enemy->y + enemy->tex->height/2};
-			Rect enemyRect = {enemy->x, enemy->y, (float)enemy->tex->width, (float)enemy->tex->height};
-
-			float idleLimit, moveSpeed, chaseSpeed, moveDistMin, moveDistMax, aggroRange, attackRate, attackDamage, goldGiven;
-			if (enemy->type == ENEMY_BAT) {
-				idleLimit = 3;
-				moveSpeed = 1;
-				chaseSpeed = 3;
-				moveDistMin = 32;
-				moveDistMax = 64;
-
-				if (dayPhase == DAY_NIGHT) aggroRange = 32*6;
-				else aggroRange = 32*3;
-
-				attackRate = 1;
-				attackDamage = 3;
-				goldGiven = 10;
-			} else if (enemy->type == ENEMY_GAURD) {
-				idleLimit = 10;
-				moveSpeed = 0.3;
-				chaseSpeed = 0.5;
-				moveDistMin = 8;
-				moveDistMax = 16;
-
-				aggroRange = 32*3;
-
-				attackRate = 3;
-				attackDamage = 2;
-				goldGiven = 30;
-			}
-
-			moveSpeed *= game->timeScale;
-			chaseSpeed *= game->timeScale;
-
-			enemy->stateTime += elapsed;
-			if (enemy->state == STATE_IDLE) {
-				if (enemy->stateTime > idleLimit) {
-					enemy->state = STATE_MOVING;
-					enemy->stateTime = 0;
-					enemy->nextPos.x = enemyCenter.x + (rndFloat(moveDistMin, moveDistMax) * (rnd() > 0.5 ? -1 : 1));
-					enemy->nextPos.y = enemyCenter.y + (rndFloat(moveDistMin, moveDistMax) * (rnd() > 0.5 ? -1 : 1));
-				}
-			}
-
-			if (enemy->state == STATE_MOVING) {
-				float angle = radsBetween(enemyCenter.x, enemyCenter.y, enemy->nextPos.x, enemy->nextPos.y);
-				enemy->x += cos(angle) * moveSpeed;
-				enemy->y += sin(angle) * moveSpeed;
-
-				if (distanceBetween(enemyCenter.x, enemyCenter.y, enemy->nextPos.x, enemy->nextPos.y) < 10) {
-					enemy->state = STATE_IDLE;
-					enemy->stateTime = 0;
-				}
-			}
-
-			float playerDist = distanceBetween(enemyCenter.x, enemyCenter.y, playerCenter.x, playerCenter.y);
-
-			GameObject *closestTurret = getClosestGameObject(enemyCenter.x, enemyCenter.y, GO_TURRET);
-			float turretDist = 9999999999;
-			if (closestTurret) {
-				turretDist = distanceBetween(
-					enemyCenter.x, enemyCenter.y,
-					closestTurret->x + closestTurret->tex->width/2, closestTurret->y + closestTurret->tex->height/2
-				);
-			}
-
-			//@cleanup Do these vars even need to be inside the enemy struct? Same with chaseRect
-			enemy->chasingPlayer = false;
-			enemy->targetTurret = NULL;
-
-			bool targetInRange = false;
-			if (playerDist < turretDist && playerDist < aggroRange) {
-				enemy->chasingPlayer = true;
-				enemy->chaseRect.setTo(player->x, player->y, player->tex->width, player->tex->height);
-				targetInRange = true;
-			} else if (turretDist < playerDist && turretDist < aggroRange) {
-				enemy->targetTurret = closestTurret;
-				enemy->chaseRect.setTo(closestTurret->x, closestTurret->y, closestTurret->tex->width, closestTurret->tex->height);
-				targetInRange = true;
-			}
-
-			if (enemy->superAggroTurret) {
-				if (!enemy->superAggroTurret->exists) {
-					enemy->superAggroTurret = NULL;
-				} else if (!enemy->chasingPlayer && !enemy->targetTurret) {
-					targetInRange = true;
-					enemy->targetTurret = enemy->superAggroTurret;
-					enemy->chaseRect.setTo(closestTurret->x, closestTurret->y, closestTurret->tex->width, closestTurret->tex->height);
-				}
-			}
-
-			if (targetInRange) {
-				enemy->state = STATE_CHASING;
-				if (enemyRect.intersects(&enemy->chaseRect)) {
-					enemy->state = STATE_ATTACKING;
-				} else {
-					Point chaseCenter = {enemy->chaseRect.x + enemy->chaseRect.width/2, enemy->chaseRect.y + enemy->chaseRect.height/2};
-					float angle = radsBetween(enemyCenter.x, enemyCenter.y, chaseCenter.x, chaseCenter.y);
-					enemy->x += cos(angle) * chaseSpeed;
-					enemy->y += sin(angle) * chaseSpeed;
-				}
-			}
-
-			if (!targetInRange && (enemy->state == STATE_CHASING || enemy->state == STATE_ATTACKING)) {
-				enemy->state = STATE_IDLE;
-			}
-
-			if (enemy->state == STATE_ATTACKING) {
-				enemy->attackTime += elapsed;
-				if (enemy->attackTime > attackRate) {
-					if (enemy->chasingPlayer) player->hp -= attackDamage;
-					if (enemy->targetTurret) enemy->targetTurret->hp -= attackDamage;
-					enemy->attackTime = 0;
-				}
-			}
-
-			if (enemy->hp <= 0) {
-				for (int goldIndex = 0; goldIndex < goldGiven; goldIndex++) {
-					Point itemPoint;
-					enemyRect.randomPoint(&itemPoint);
-					createItem(itemPoint.x, itemPoint.y, ITEM_GOLD);
-				}
-				enemy->exists = false;
-			}
-		}
-	}
-	profiler->endProfile("Update Enemies");
 
 	profiler->startProfile("Update Bullets");
 	{ /// Bullets
@@ -883,18 +890,18 @@ void update() {
 
 			Rect bulletRect = {bullet->x, bullet->y, (float)bullet->tex->width, (float)bullet->tex->height};
 
-			for (int i = 0; i < ENEMY_MAX; i++) {
-				Enemy *enemy = &game->enemies[i];
-				if (!enemy->exists) continue;
-				Rect enemyRect = {enemy->x, enemy->y, (float)enemy->tex->width, (float)enemy->tex->height};
+			// for (int i = 0; i < ENEMY_MAX; i++) {
+			// 	Enemy *enemy = &game->enemies[i];
+			// 	if (!enemy->exists) continue;
+			// 	Rect enemyRect = {enemy->x, enemy->y, (float)enemy->tex->width, (float)enemy->tex->height};
 
-				if (bulletRect.intersects(&enemyRect)) {
-					bullet->exists = false;
-					if (!enemy->superAggroTurret) enemy->superAggroTurret = bullet->sourceTurret;
-					enemy->hp -= bullet->damage;
-					break;
-				}
-			}
+			// 	if (bulletRect.intersects(&enemyRect)) {
+			// 		bullet->exists = false;
+			// 		if (!enemy->superAggroTurret) enemy->superAggroTurret = bullet->sourceTurret;
+			// 		enemy->hp -= bullet->damage;
+			// 		break;
+			// 	}
+			// }
 		}
 	}
 	profiler->endProfile("Update Bullets");
@@ -993,6 +1000,30 @@ void update() {
 			def.pos.x = go->x;
 			def.pos.y = go->y;
 			def.alpha = go->alpha;
+
+			if (go->subtype == GO_ENEMY_BAT) {
+				float floatSpeedX;
+				float floatSpeedY;
+				float floatDistX;
+				float floatDistY;
+
+				if (go->state == STATE_ATTACKING) {
+					floatSpeedX = 20;
+					floatSpeedY = 10;
+					floatDistX = 3;
+					floatDistY = 3;
+				} else {
+					floatSpeedX = 0;
+					floatSpeedY = 2;
+					floatDistX = 0;
+					floatDistY = 3;
+				}
+
+				def.pos.x += cos((platform->time - go->spawnTime)*floatSpeedX) * floatDistX;
+				def.pos.y += cos((platform->time - go->spawnTime)*floatSpeedY) * floatDistY;
+
+				if (go->state == STATE_CHASING) def.tint = 0x88FF0000;
+			}
 			drawSpriteEx(&def);
 
 			if (go->type == GO_TURRET) {
@@ -1034,44 +1065,44 @@ void update() {
 		}
 	}
 
-	{ /// Draw enemies
-		for (int i = 0; i < ENEMY_MAX; i++) {
-			Enemy *enemy = &game->enemies[i];
-			if (!enemy->exists) continue;
-			defaultSpriteDef(&def);
-			def.tex = enemy->tex;
-			def.pos.x = enemy->x;
-			def.pos.y = enemy->y;
+	// { /// Draw enemies
+	// 	for (int i = 0; i < ENEMY_MAX; i++) {
+	// 		Enemy *enemy = &game->enemies[i];
+	// 		if (!enemy->exists) continue;
+	// 		defaultSpriteDef(&def);
+	// 		def.tex = enemy->tex;
+	// 		def.pos.x = enemy->x;
+	// 		def.pos.y = enemy->y;
 
-			if (enemy->type == ENEMY_BAT) {
-				float floatSpeedX;
-				float floatSpeedY;
-				float floatDistX;
-				float floatDistY;
+	// 		if (enemy->type == ENEMY_BAT) {
+	// 			float floatSpeedX;
+	// 			float floatSpeedY;
+	// 			float floatDistX;
+	// 			float floatDistY;
 
-				if (enemy->state == STATE_ATTACKING) {
-					floatSpeedX = 20;
-					floatSpeedY = 10;
-					floatDistX = 3;
-					floatDistY = 3;
-				} else {
-					floatSpeedX = 0;
-					floatSpeedY = 2;
-					floatDistX = 0;
-					floatDistY = 3;
-				}
+	// 			if (enemy->state == STATE_ATTACKING) {
+	// 				floatSpeedX = 20;
+	// 				floatSpeedY = 10;
+	// 				floatDistX = 3;
+	// 				floatDistY = 3;
+	// 			} else {
+	// 				floatSpeedX = 0;
+	// 				floatSpeedY = 2;
+	// 				floatDistX = 0;
+	// 				floatDistY = 3;
+	// 			}
 
-				def.pos.x += cos((platform->time - enemy->spawnTime)*floatSpeedX) * floatDistX;
-				def.pos.y += cos((platform->time - enemy->spawnTime)*floatSpeedY) * floatDistY;
-			}
+	// 			def.pos.x += cos((platform->time - enemy->spawnTime)*floatSpeedX) * floatDistX;
+	// 			def.pos.y += cos((platform->time - enemy->spawnTime)*floatSpeedY) * floatDistY;
+	// 		}
 
-			if (enemy->state == STATE_CHASING) {
-				def.tint = 0x88FF0000;
-			}
+	// 		if (enemy->state == STATE_CHASING) {
+	// 			def.tint = 0x88FF0000;
+	// 		}
 
-			drawSpriteEx(&def);
-		}
-	}
+	// 		drawSpriteEx(&def);
+	// 	}
+	// }
 
 	{ /// Draw bullets
 		for (int i = 0; i < BULLETS_MAX; i++) {
@@ -1170,12 +1201,6 @@ void update() {
 				drawHpBar(go->x + go->tex->width/2, go->y + go->tex->height + 5, go->hp, go->maxHp);
 			}
 		}
-
-		for (int i = 0; i < ENEMY_MAX; i++) {
-			Enemy *enemy = &game->enemies[i];
-			if (!enemy->exists) continue;
-			drawHpBar(enemy->x + enemy->tex->width/2, enemy->y + enemy->tex->height + 5, enemy->hp, enemy->maxHp);
-		}
 	}
 
 	// drawRect(player->x + 100 - renderer->camPos.x, player->y + 100 - renderer->camPos.y, 100, 100, 0xFFFFFFFF);
@@ -1228,32 +1253,27 @@ GameObject *buildTurret(int x, int y, InvType type) {
 	return turret;
 }
 
-Enemy *spawnEnemy(float x, float y, EnemyType type) {
-	for (int i = 0; i < ENEMY_MAX; i++) {
-		Enemy *enemy = &game->enemies[i];
-		if (enemy->exists) continue;
-		memset(enemy, 0, sizeof(Enemy));
-		enemy->exists = true;
-		enemy->spawnTime = platform->time;
+GameObject *spawnEnemy(float x, float y, GameObjectSubType subtype) {
+	GameObject *enemy = newGameObject();
+	enemy->spawnTime = platform->time;
 
-		if (type == ENEMY_BAT) {
-			enemy->tex = game->enemyBatTexture;
-			enemy->maxHp = enemy->hp = 20;
-		}
+	enemy->type = GO_ENEMY;
+	enemy->subtype = subtype;
 
-		if (type == ENEMY_GAURD) {
-			enemy->tex = game->enemyGaurdTexture;
-			enemy->maxHp = enemy->hp = 200;
-		}
-
-		enemy->x = x - enemy->tex->width/2;
-		enemy->y = y - enemy->tex->height/2;
-		enemy->type = type;
-
-		return enemy;
+	if (subtype == GO_ENEMY_BAT) {
+		enemy->tex = game->enemyBatTexture;
+		enemy->maxHp = enemy->hp = 20;
 	}
 
-	return NULL;
+	if (subtype == GO_ENEMY_GAURD) {
+		enemy->tex = game->enemyGaurdTexture;
+		enemy->maxHp = enemy->hp = 200;
+	}
+
+	enemy->x = x - enemy->tex->width/2;
+	enemy->y = y - enemy->tex->height/2;
+
+	return enemy;
 }
 
 GameObject *isRectOverGameObject(Rect *rect, GameObjectType type, GameObjectSubType subtype) {
@@ -1304,28 +1324,13 @@ GameObject *getClosestGameObject(float px, float py, GameObjectType type, GameOb
 	for (int i = 0; i < GAME_OBJECTS_MAX; i++) {
 		GameObject *go = &game->gameObjects[i];
 		if (!go->exists) continue;
+		if (type && go->type != type) continue;
+		if (subtype && go->subtype != subtype) continue;
 
 		float curDist = distanceBetween(px, py, go->x + go->tex->width/2, go->y + go->tex->height/2);
 		if (curDist < dist || closest == NULL) {
 			dist = curDist;
 			closest = go;
-		}
-	}
-
-	return closest;
-}
-
-Enemy *getClosestEnemy(float px, float py) {
-	Enemy *closest = NULL;
-	float dist = 0;
-
-	for (int i = 0; i < ENEMY_MAX; i++) {
-		Enemy *enemy = &game->enemies[i];
-		if (!enemy->exists) continue;
-		float curDist = distanceBetween(px, py, enemy->x + enemy->tex->width/2, enemy->y + enemy->tex->height/2);
-		if (curDist < dist || closest == NULL) {
-			dist = curDist;
-			closest = enemy;
 		}
 	}
 
