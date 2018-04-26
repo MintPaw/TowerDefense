@@ -27,14 +27,14 @@ enum BulletType { BULLET_BASIC };
 enum ItemType { ITEM_GOLD };
 enum DayPhase { DAY_DAWN, DAY_MID, DAY_DUSK, DAY_NIGHT };
 
-enum GameObjectType { GO_NULL = 0, GO_PLAYER, GO_TURRET, GO_ENEMY };
-enum GameObjectSubType { GO_SUB_NULL = 0, GO_BASIC_TURRET, GO_ENEMY_BAT, GO_ENEMY_GAURD };
+enum GameObjectType { GO_NULL = 0, GO_PLAYER, GO_TURRET, GO_ENEMY, GO_BULLET };
+enum GameObjectSubType { GO_SUB_NULL = 0, GO_TURRET_BASIC, GO_ENEMY_BAT, GO_ENEMY_GAURD, GO_BULLET_BASIC };
 
 struct GameObject {
 	bool exists;
 	GameObjectType type;
 	GameObjectSubType subtype;
-	float x, y, alpha;
+	float x, y, alpha, rotation;
 	Texture *tex;
 	float hp, maxHp;
 
@@ -52,6 +52,10 @@ struct GameObject {
 	GameObject *superAggroTurret;
 	bool chasingPlayer;
 	Rect chaseRect;
+
+	/// Bullet
+	float damage; //@cleanup This probably doesn't need to exist
+	GameObject *sourceTurret;
 
 	float attackTime;
 };
@@ -71,17 +75,17 @@ struct Item {
 	Texture *tex;
 };
 
-struct Bullet {
-	bool exists;
-	float x;
-	float y;
-	float rotation;
-	float damage;
-	BulletType type;
-	Texture *tex;
+// struct Bullet {
+// 	bool exists;
+// 	float x;
+// 	float y;
+// 	float rotation;
+// 	float damage;
+// 	BulletType type;
+// 	Texture *tex;
 
-	GameObject *sourceTurret;
-};
+// 	GameObject *sourceTurret;
+// };
 
 // struct Enemy {
 // 	bool exists;
@@ -172,7 +176,6 @@ struct Game {
 
 	Rect colls[COLLS_MAX];
 	Spawner spawners[SPAWNERS_MAX];
-	Bullet bullets[BULLETS_MAX];
 	Item items[ITEMS_MAX];
 
 	int gold;
@@ -202,7 +205,7 @@ GameObject *isPointOverGameObject(float px, float py, GameObjectType type = GO_N
 bool isPointOverColl(float px, float py);
 GameObject *getClosestGameObject(float px, float py, GameObjectType type = GO_NULL, GameObjectSubType subtype = GO_SUB_NULL);
 
-Bullet *shootBullet(float x, float y, BulletType type, float degrees, float startDist);
+GameObject *shootBullet(float x, float y, GameObjectSubType subtype, float degrees, float startDist);
 Item *createItem(float x, float y, ItemType type);
 
 void drawHpBar(float x, float y, float value, float total);
@@ -518,6 +521,7 @@ void update() {
 	GameObject *hoveredTurret = NULL;
 	float turretHoveredRange = 0;
 
+	/// Update game objects
 	for (int goIndex = 0; goIndex < GAME_OBJECTS_MAX; goIndex++) {
 		GameObject *go = &game->gameObjects[goIndex];
 		if (!go->exists) continue;
@@ -530,7 +534,7 @@ void update() {
 				Point turretCenter = {turret->x + (float)turret->tex->width/2, turret->y + (float)turret->tex->height/2};
 
 				float turretRange, turretRate, turretDamage;
-				if (turret->subtype == GO_BASIC_TURRET) {
+				if (turret->subtype == GO_TURRET_BASIC) {
 					turretRange = 320;
 					turretRate = 3;
 					turretDamage = 5;
@@ -558,7 +562,7 @@ void update() {
 
 					turret->attackTime += elapsed;
 					if (turret->attackTime > turretRate) {
-						Bullet *bullet = shootBullet(turretCenter.x, turretCenter.y, BULLET_BASIC, turret->gunRotation, 0);
+						GameObject *bullet = shootBullet(turretCenter.x, turretCenter.y, GO_BULLET_BASIC, turret->gunRotation, 0);
 						bullet->sourceTurret = turret;
 						bullet->damage = turretDamage;
 						turret->attackTime = 0;
@@ -703,6 +707,43 @@ void update() {
 		}
 		// profiler->endProfile("Update Enemies");
 
+		// profiler->startProfile("Update Bullets");
+		{ /// Bullets
+			if (go->type == GO_BULLET) {
+				GameObject *bullet = go;
+
+				float bulletSpeed;
+
+				if (bullet->subtype == GO_BULLET_BASIC) {
+					bulletSpeed = 5;
+				}
+
+				bulletSpeed *= game->timeScale;
+
+				bullet->x += cos(toRad(bullet->rotation)) * bulletSpeed;
+				bullet->y += sin(toRad(bullet->rotation)) * bulletSpeed;
+
+				Rect bulletRect = {bullet->x, bullet->y, (float)bullet->tex->width, (float)bullet->tex->height};
+
+				/////
+				//@cleanup
+				// This may become an issue if there are enemies too large
+				// You might be tracking an enemy closer because it is smaller
+				// But accidently miss the collision on the larger enemy
+				/////
+				GameObject *closestEnemy = getClosestGameObject(bulletRect.x + bulletRect.width/2, bulletRect.y + bulletRect.height/2, GO_ENEMY);
+				if (closestEnemy) {
+					Rect enemyRect = {closestEnemy->x, closestEnemy->y, (float)closestEnemy->tex->width, (float)closestEnemy->tex->height};
+
+					if (bulletRect.intersects(&enemyRect)) {
+						bullet->exists = false;
+						if (!closestEnemy->superAggroTurret) closestEnemy->superAggroTurret = bullet->sourceTurret;
+						closestEnemy->hp -= bullet->damage;
+					}
+				}
+			}
+		}
+		// profiler->endProfile("Update Bullets");
 	}
 
 	profiler->startProfile("Update Movement");
@@ -869,42 +910,6 @@ void update() {
 		}
 	}
 	profiler->endProfile("Update Spawners");
-
-
-	profiler->startProfile("Update Bullets");
-	{ /// Bullets
-		for (int i = 0; i < BULLETS_MAX; i++) {
-			Bullet *bullet = &game->bullets[i];
-			if (!bullet->exists) continue;
-
-			float bulletSpeed;
-
-			if (bullet->type == BULLET_BASIC) {
-				bulletSpeed = 5;
-			}
-
-			bulletSpeed *= game->timeScale;
-
-			bullet->x += cos(toRad(bullet->rotation)) * bulletSpeed;
-			bullet->y += sin(toRad(bullet->rotation)) * bulletSpeed;
-
-			Rect bulletRect = {bullet->x, bullet->y, (float)bullet->tex->width, (float)bullet->tex->height};
-
-			// for (int i = 0; i < ENEMY_MAX; i++) {
-			// 	Enemy *enemy = &game->enemies[i];
-			// 	if (!enemy->exists) continue;
-			// 	Rect enemyRect = {enemy->x, enemy->y, (float)enemy->tex->width, (float)enemy->tex->height};
-
-			// 	if (bulletRect.intersects(&enemyRect)) {
-			// 		bullet->exists = false;
-			// 		if (!enemy->superAggroTurret) enemy->superAggroTurret = bullet->sourceTurret;
-			// 		enemy->hp -= bullet->damage;
-			// 		break;
-			// 	}
-			// }
-		}
-	}
-	profiler->endProfile("Update Bullets");
 
 	profiler->startProfile("Update Items");
 	{ /// Items
@@ -1105,18 +1110,18 @@ void update() {
 	// }
 
 	{ /// Draw bullets
-		for (int i = 0; i < BULLETS_MAX; i++) {
-			Bullet *bullet = &game->bullets[i];
-			if (!bullet->exists) continue;
-			defaultSpriteDef(&def);
-			def.tex = bullet->tex;
-			def.pos.x = bullet->x;
-			def.pos.y = bullet->y;
-			def.pivot.x = bullet->tex->width/2;
-			def.pivot.y = bullet->tex->height/2;
-			def.rotation = bullet->rotation;
-			drawSpriteEx(&def);
-		}
+		// for (int i = 0; i < BULLETS_MAX; i++) {
+		// 	Bullet *bullet = &game->bullets[i];
+		// 	if (!bullet->exists) continue;
+		// 	defaultSpriteDef(&def);
+		// 	def.tex = bullet->tex;
+		// 	def.pos.x = bullet->x;
+		// 	def.pos.y = bullet->y;
+		// 	def.pivot.x = bullet->tex->width/2;
+		// 	def.pivot.y = bullet->tex->height/2;
+		// 	def.rotation = bullet->rotation;
+		// 	drawSpriteEx(&def);
+		// }
 	}
 
 	{ /// Draw selecter
@@ -1243,7 +1248,7 @@ GameObject *buildTurret(int x, int y, InvType type) {
 	turret->type = GO_TURRET;
 
 	if (type == INV_TURRET_BASIC) {
-		turret->subtype = GO_BASIC_TURRET;
+		turret->subtype = GO_TURRET_BASIC;
 		turret->tex = game->basicTurretBaseTexture;
 		turret->gunTex = game->basicTurretGunTexture;
 
@@ -1337,28 +1342,23 @@ GameObject *getClosestGameObject(float px, float py, GameObjectType type, GameOb
 	return closest;
 }
 
-Bullet *shootBullet(float x, float y, BulletType type, float degrees, float startDist) {
-	for (int i = 0; i < BULLETS_MAX; i++) {
-		Bullet *bullet = &game->bullets[i];
-		if (bullet->exists) continue;
-		memset(bullet, 0, sizeof(Bullet));
-		bullet->exists = true;
-		bullet->type = type;
-		bullet->rotation = degrees;
+GameObject *shootBullet(float x, float y, GameObjectSubType subtype, float degrees, float startDist) {
+	GameObject *bullet = newGameObject();
 
-		if (type == BULLET_BASIC) {
-			bullet->tex = game->bulletBasicTexture;
-		}
+	bullet->type = GO_BULLET;
+	bullet->subtype = subtype;
+	bullet->rotation = degrees;
 
-		x -= bullet->tex->width/2;
-		y -= bullet->tex->height/2;
-		bullet->x = x + cos(toRad(degrees)) * startDist;
-		bullet->y = y + sin(toRad(degrees)) * startDist;
-
-		return bullet;
+	if (subtype == GO_BULLET_BASIC) {
+		bullet->tex = game->bulletBasicTexture;
 	}
 
-	return NULL;
+	x -= bullet->tex->width/2;
+	y -= bullet->tex->height/2;
+	bullet->x = x + cos(toRad(degrees)) * startDist;
+	bullet->y = y + sin(toRad(degrees)) * startDist;
+
+	return bullet;
 }
 
 Item *createItem(float x, float y, ItemType type) {
