@@ -1,6 +1,7 @@
 /*
 			TODO:
 			Make gold texture and untint
+			Profile timing
 			*/
 #include "platform.h"
 #include "renderer.h"
@@ -21,6 +22,7 @@ enum EnemyType { ENEMY_BAT };
 enum EnemyState { STATE_IDLE=0, STATE_MOVING, STATE_CHASING, STATE_ATTACKING };
 enum BulletType { BULLET_BASIC };
 enum ItemType { ITEM_GOLD };
+enum DayPhase { DAY_DAWN, DAY_MID, DAY_DUSK, DAY_NIGHT };
 
 struct Turret;
 
@@ -434,7 +436,27 @@ void update() {
 	Rect playerRect = {player->x, player->y, (float)player->tex->width, (float)player->tex->height};
 
 	float elapsed = platform->elapsed * game->timeScale;
-	game->timeOfDay += elapsed;
+
+	DayPhase dayPhase;
+	int hours, minutes;
+	{ /// Time of day
+		game->timeOfDay += elapsed;
+		if (game->timeOfDay > 300) {
+			game->day++;
+			game->timeOfDay = 0;
+		}
+
+		float dayPerc = game->timeOfDay / 300.0;
+		float totalSeconds = dayPerc * 86400.0;
+		int totalMinutes = totalSeconds / 60;
+		hours = totalMinutes / 60;
+		minutes = totalMinutes % 60;
+
+		if (hours >= 6 && hours <= 8) dayPhase = DAY_DAWN;
+		if (hours >= 9 && hours <= 17) dayPhase = DAY_MID;
+		if (hours >= 18 && hours <= 20) dayPhase = DAY_DUSK;
+		if (hours >= 21 || hours <= 5) dayPhase = DAY_NIGHT;
+	}
 
 	bool moveUp = false;
 	bool moveDown = false;
@@ -902,8 +924,15 @@ void update() {
 			);
 		}
 
+		bool pm = false;
+		
+		if (hours == 0) hours = 12;
+		else if (hours > 11) pm = true;
+
+		if (hours > 12) hours -= 12;
+
 		drawText(&game->goldText, game->mainFont, "Gold: %d", game->gold);
-		drawText(&game->timeText, game->mainFont, "Day %d %d", game->day, (int)game->timeOfDay);
+		drawText(&game->timeText, game->mainFont, "Day %d\n%d:%02d %s\n", game->day, hours, minutes, pm ? "pm" : "am");
 	}
 	profiler->endProfile("Update Hud");
 
