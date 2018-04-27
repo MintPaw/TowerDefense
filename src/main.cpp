@@ -1,6 +1,5 @@
 /*
 			TODO:
-			Make AI attack walls
 			Deal with there being too many game objects
 			Draw GameObject directly rather than SpriteDef
 			Make destroyGameObject
@@ -276,6 +275,8 @@ void update() {
 							npc->x = object->x;
 							npc->y = object->y;
 							npc->tex = game->oldManNpcTexture;
+						} else if (streq(object->name.ptr, "wall")) {
+							buildWall(object->x, object->y);
 						}
 					}
 
