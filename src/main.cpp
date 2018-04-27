@@ -737,12 +737,14 @@ void update() {
 	{ /// Selecter
 		GameObject *selecterOverTurret = NULL;
 		bool selecterOverPlayer = false;
+		bool selecterOverWall = false;
 
 		selecterPos.x = roundToNearest(platform->mouseX + renderer->camPos.x - game->selecterTexture->width/2, game->tileSize);
 		selecterPos.y = roundToNearest(platform->mouseY + renderer->camPos.y - game->selecterTexture->height/2, game->tileSize);
 
 		Rect selecterRect = {selecterPos.x, selecterPos.y, (float)game->selecterTexture->width, (float)game->selecterTexture->height};
 		selecterOverTurret = isRectOverGameObject(&selecterRect, GO_TURRET);
+		selecterOverWall = isRectOverGameObject(&selecterRect, GO_WALL); 
 
 		if (selecterRect.containsPoint(&playerCenter)) selecterOverPlayer = true;
 
@@ -761,7 +763,7 @@ void update() {
 				selecterValid = false;
 			}
 		} else {
-			if (selecterOverTurret || selecterOverPlayer || notEnoughGold) selecterValid = false;
+			if (selecterOverTurret || selecterOverPlayer || selecterOverWall || notEnoughGold) selecterValid = false;
 			else selecterValid = true;
 		}
 
