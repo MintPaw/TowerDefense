@@ -1,7 +1,5 @@
 /*
 			TODO:
-			Refactor enemy chase stuff
-
 			Deal with there being too many game objects
 			Draw GameObject directly rather than SpriteDef
 			Profile timing
@@ -269,6 +267,7 @@ void update() {
 							}
 						} else if (streq(object->name.ptr, "oldManNpc")) {
 							GameObject *npc = newGameObject(GO_NPC, GO_NPC_OLD_MAN);
+							npc->maxHp = npc->hp = 10;
 							npc->x = object->x;
 							npc->y = object->y;
 							npc->tex = game->oldManNpcTexture;
@@ -674,6 +673,8 @@ void update() {
 					//@incomplete if the npc is the old man...
 					dialog = "Did you know you can press Q and E to change your current item?\n\nCome back later for another tip...";
 				}
+
+				if (npc->hp <= 0) npc->exists = false;
 			}
 		}
 	}
