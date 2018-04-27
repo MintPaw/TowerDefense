@@ -1,5 +1,6 @@
 /*
 			TODO:
+			Make AI attack walls
 			Deal with there being too many game objects
 			Draw GameObject directly rather than SpriteDef
 			Make destroyGameObject
@@ -21,7 +22,7 @@ enum SpawnerType { SPAWNER_BAT, SPAWNER_GAURD };
 enum EnemyState { STATE_IDLE=0, STATE_MOVING, STATE_CHASING, STATE_ATTACKING };
 enum DayPhase { DAY_DAWN, DAY_MID, DAY_DUSK, DAY_NIGHT };
 
-enum GameObjectType { GO_NULL = 0, GO_PLAYER, GO_TURRET, GO_ENEMY, GO_BULLET, GO_ITEM, GO_NPC };
+enum GameObjectType { GO_NULL = 0, GO_PLAYER, GO_TURRET, GO_ENEMY, GO_BULLET, GO_ITEM, GO_NPC, GO_WALL };
 enum GameObjectSubtype { GO_SUB_NULL = 0, GO_TURRET_BASIC, GO_ENEMY_BAT, GO_ENEMY_GAURD, GO_BULLET_BASIC, GO_ITEM_GOLD, GO_NPC_OLD_MAN };
 
 struct GameObject {
@@ -82,6 +83,7 @@ struct Game {
 
 	Texture *basicTurretBaseTexture;
 	Texture *basicTurretGunTexture;
+	Texture *wallTexture;
 
 	Texture *upgradeOption1Texture;
 	Texture *upgradeOption2Texture;
@@ -138,6 +140,7 @@ bool getKeyPressed(int key);
 GameObject *newGameObject(GameObjectType type, GameObjectSubtype subtype=GO_SUB_NULL);
 
 GameObject *buildTurret(int x, int y, InvType type);
+GameObject *buildWall(int x, int y);
 
 GameObject *spawnEnemy(float x, float y, GameObjectSubtype type);
 
@@ -146,6 +149,7 @@ GameObject *isPointOverGameObject(float px, float py, GameObjectType type = GO_N
 bool isPointOverColl(float px, float py);
 GameObject *getClosestGameObject(float px, float py, GameObjectType type = GO_NULL, GameObjectSubtype subtype = GO_SUB_NULL, float *returnDist=NULL);
 GameObject *getClosestGameObject(float px, float py, GameObjectType *types=NULL, int typesNum=0, GameObjectSubtype *rejectSubtypes=NULL, int rejectSubtypesNum=0, float *returnDist=NULL);
+void getGameObjectsOfType(GameObjectType *types, int typesNum, GameObjectSubtype *rejectSubtypes, int rejectSubtypesNum, GameObject **objects, int *objectsNum);
 
 GameObject *shootBullet(float x, float y, GameObjectSubtype subtype, float degrees, float startDist);
 GameObject *createItem(float x, float y, GameObjectSubtype subtype);
@@ -199,6 +203,7 @@ void update() {
 
 		game->basicTurretBaseTexture = uploadPngTexturePath("assets/sprites/basicTurretBase.png");
 		game->basicTurretGunTexture = uploadPngTexturePath("assets/sprites/basicTurretGun.png");
+		game->wallTexture = uploadPngTexturePath("assets/sprites/wall.png");
 
 		game->enemyBatTexture = uploadPngTexturePath("assets/sprites/enemyBat.png");
 		game->enemyGaurdTexture = uploadPngTexturePath("assets/sprites/enemyGaurd.png");
@@ -678,6 +683,14 @@ void update() {
 				if (npc->hp <= 0) npc->exists = false;
 			}
 		}
+
+		{ /// Walls
+			if (go->type == GO_WALL) {
+				if (go->hp < 0) {
+					go->exists = false;
+				}
+			}
+		}
 	}
 	profiler->endProfile("Update GameObjects");
 
@@ -801,7 +814,7 @@ void update() {
 					game->gold -= turretPrice;
 				}
 			} else if (game->currentInv == INV_WALL) {
-				// Build wall
+					buildWall(selecterPos.x, selecterPos.y);
 			} else if (game->currentInv == INV_HANDS) {
 				if (selecterValid) {
 					game->selectedTurret = selecterOverTurret;
@@ -1086,6 +1099,18 @@ void drawHpBar(float x, float y, float value, float total) {
 	drawRect(x - width/2 - renderer->camPos.x, y - renderer->camPos.y, value/total * width, height, 0xFF00FF00);
 }
 
+GameObject *buildWall(int x, int y) {
+	GameObject *wall = newGameObject(GO_WALL);
+	wall->x = x;
+	wall->y = y;
+
+	wall->tex = game->wallTexture;
+
+	wall->maxHp = wall->hp = 100;
+
+	return wall;
+}
+
 GameObject *buildTurret(int x, int y, InvType type) {
 	GameObject *turret = newGameObject(GO_TURRET);
 	turret->x = x;
@@ -1217,6 +1242,9 @@ GameObject *getClosestGameObject(float px, float py, GameObjectType *types, int 
 
 	if (returnDist) *returnDist = dist;
 	return closest;
+}
+
+void getGameObjectsOfType(GameObjectType *types, int typesNum, GameObjectSubtype *rejectSubtypes, int rejectSubtypesNum, GameObject **objects, int *objectsNum) {
 }
 
 GameObject *shootBullet(float x, float y, GameObjectSubtype subtype, float degrees, float startDist) {
