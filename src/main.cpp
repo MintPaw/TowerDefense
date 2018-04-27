@@ -2,8 +2,6 @@
 			TODO:
 			Deal with there being too many game objects
 			Draw GameObject directly rather than SpriteDef
-			Profile timing
-			Remove most of the profiling
 			Make destroyGameObject
 
 			Make gold texture
@@ -569,7 +567,7 @@ void update() {
 				Rect chaseRect;
 
 				GameObjectType matchTypes[] = {GO_PLAYER, GO_TURRET, GO_NPC, GO_ENEMY};
-				GameObjectSubtype rejectSubtypes[] = {GO_ENEMY_BAT};
+				GameObjectSubtype rejectSubtypes[] = {enemy->subtype};
 
 				float targetDist = 0;
 				GameObject *possibleTarget = getClosestGameObject(enemyCenter.x, enemyCenter.y, matchTypes, ArrayLength(matchTypes), rejectSubtypes, ArrayLength(rejectSubtypes), &targetDist);
