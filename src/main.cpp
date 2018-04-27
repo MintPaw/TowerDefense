@@ -574,7 +574,7 @@ void update() {
 				GameObject *target = NULL;
 				Rect chaseRect;
 
-				GameObjectType matchTypes[] = {GO_PLAYER, GO_TURRET, GO_NPC, GO_ENEMY};
+				GameObjectType matchTypes[] = {GO_PLAYER, GO_TURRET, GO_NPC, GO_ENEMY, GO_WALL};
 				GameObjectSubtype rejectSubtypes[] = {enemy->subtype};
 
 				float targetDist = 0;
@@ -1106,7 +1106,7 @@ GameObject *buildWall(int x, int y) {
 
 	wall->tex = game->wallTexture;
 
-	wall->maxHp = wall->hp = 100;
+	wall->maxHp = wall->hp = 20;
 
 	return wall;
 }
@@ -1216,6 +1216,27 @@ GameObject *getClosestGameObject(float px, float py, GameObjectType *types, int 
 	GameObject *closest = NULL;
 	float dist = 0;
 
+	GameObject *gos[GAME_OBJECTS_MAX];
+	int gosNum = 0;
+	getGameObjectsOfType(types, typesNum, rejectSubtypes, rejectSubtypesNum, (GameObject **)&gos, &gosNum);
+
+	for (int i = 0; i < gosNum; i++) {
+		GameObject *go = gos[i];
+
+		float curDist = distanceBetween(px, py, go->x + go->tex->width/2, go->y + go->tex->height/2);
+		if (curDist < dist || closest == NULL) {
+			dist = curDist;
+			closest = go;
+		}
+	}
+
+	if (returnDist) *returnDist = dist;
+	return closest;
+}
+
+void getGameObjectsOfType(GameObjectType *types, int typesNum, GameObjectSubtype *rejectSubtypes, int rejectSubtypesNum, GameObject **objects, int *objectsNum) {
+	*objectsNum = 0;
+
 	for (int i = 0; i < GAME_OBJECTS_MAX; i++) {
 		GameObject *go = &game->gameObjects[i];
 		if (!go->exists) continue;
@@ -1233,18 +1254,9 @@ GameObject *getClosestGameObject(float px, float py, GameObjectType *types, int 
 
 		if (!matchesType || !matchesSubtype) continue;
 
-		float curDist = distanceBetween(px, py, go->x + go->tex->width/2, go->y + go->tex->height/2);
-		if (curDist < dist || closest == NULL) {
-			dist = curDist;
-			closest = go;
-		}
+		objects[*objectsNum] = go;
+		*objectsNum = *objectsNum + 1;
 	}
-
-	if (returnDist) *returnDist = dist;
-	return closest;
-}
-
-void getGameObjectsOfType(GameObjectType *types, int typesNum, GameObjectSubtype *rejectSubtypes, int rejectSubtypesNum, GameObject **objects, int *objectsNum) {
 }
 
 GameObject *shootBullet(float x, float y, GameObjectSubtype subtype, float degrees, float startDist) {
