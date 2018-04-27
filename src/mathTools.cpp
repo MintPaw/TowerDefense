@@ -2,10 +2,6 @@
 
 #include "mathTools.h"
 
-#define Min(x, y) ((x) < (y) ? (x) : (y))
-#define Max(x, y) ((x) > (y) ? (x) : (y))
-#define PI 3.14159
-
 float roundToNearest(float num, float nearest) {
 	return roundf(num / nearest) * nearest;
 }

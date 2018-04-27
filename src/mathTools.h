@@ -1,5 +1,10 @@
 #pragma once
 
+#define Min(x, y) ((x) < (y) ? (x) : (y))
+#define Max(x, y) ((x) > (y) ? (x) : (y))
+#define PI 3.14159
+#define ArrayLength(x) ((sizeof(x)/sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
+
 struct Rect;
 struct Matrix;
 struct Point;

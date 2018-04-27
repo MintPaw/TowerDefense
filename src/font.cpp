@@ -124,9 +124,9 @@ void drawText(Text *tf, BitmapFont *font, const char *text, ...) {
 	clearTexture(tex);
 
 	Rect charRects[TEXT_MAX];
-	int lineBreaks[TEXT_MAX];
+	// int lineBreaks[TEXT_MAX];
 	int charRectsNum = 0;
-	int lineBreaksNum = 0;
+	// int lineBreaksNum = 0;
 
 	Point cursor;
 	cursor.setTo(0, 0);
@@ -143,7 +143,7 @@ void drawText(Text *tf, BitmapFont *font, const char *text, ...) {
 			cursor.x = 0;
 			cursor.y += font->lineHeight;
 			textHeight += font->lineHeight;
-			lineBreaks[lineBreaksNum++] = i;
+			// lineBreaks[lineBreaksNum++] = i;
 			continue;
 		}
 
@@ -171,7 +171,7 @@ void drawText(Text *tf, BitmapFont *font, const char *text, ...) {
 				textHeight += font->lineHeight;
 			}
 
-			lineBreaks[lineBreaksNum++] = i;
+			// lineBreaks[lineBreaksNum++] = i;
 		}
 
 		if (text[i] == 0) continue; // New line removal makes this happen. //@cleanup Really?

@@ -26,12 +26,12 @@ enum EnemyState { STATE_IDLE=0, STATE_MOVING, STATE_CHASING, STATE_ATTACKING };
 enum DayPhase { DAY_DAWN, DAY_MID, DAY_DUSK, DAY_NIGHT };
 
 enum GameObjectType { GO_NULL = 0, GO_PLAYER, GO_TURRET, GO_ENEMY, GO_BULLET, GO_ITEM, GO_NPC };
-enum GameObjectSubType { GO_SUB_NULL = 0, GO_TURRET_BASIC, GO_ENEMY_BAT, GO_ENEMY_GAURD, GO_BULLET_BASIC, GO_ITEM_GOLD, GO_NPC_OLD_MAN };
+enum GameObjectSubtype { GO_SUB_NULL = 0, GO_TURRET_BASIC, GO_ENEMY_BAT, GO_ENEMY_GAURD, GO_BULLET_BASIC, GO_ITEM_GOLD, GO_NPC_OLD_MAN };
 
 struct GameObject {
 	bool exists;
 	GameObjectType type;
-	GameObjectSubType subtype;
+	GameObjectSubtype subtype;
 	float x, y, alpha, rotation;
 	Texture *tex;
 	float hp, maxHp;
@@ -46,10 +46,7 @@ struct GameObject {
 	EnemyState state;
 	float spawnTime, stateTime;
 	Point nextPos;
-	GameObject *targetTurret;
-	GameObject *superAggroTurret;
-	bool chasingPlayer;
-	Rect chaseRect;
+	GameObject *attackingTarget;
 
 	/// Bullet
 	float damage; //@cleanup This probably doesn't need to exist
@@ -141,19 +138,20 @@ struct Game {
 void update();
 bool getKeyPressed(int key);
 
-GameObject *newGameObject();
+GameObject *newGameObject(GameObjectType type, GameObjectSubtype subtype=GO_SUB_NULL);
 
 GameObject *buildTurret(int x, int y, InvType type);
 
-GameObject *spawnEnemy(float x, float y, GameObjectSubType type);
+GameObject *spawnEnemy(float x, float y, GameObjectSubtype type);
 
-GameObject *isRectOverGameObject(Rect *rect, GameObjectType type = GO_NULL, GameObjectSubType subtype = GO_SUB_NULL);
-GameObject *isPointOverGameObject(float px, float py, GameObjectType type = GO_NULL, GameObjectSubType subtype = GO_SUB_NULL);
+GameObject *isRectOverGameObject(Rect *rect, GameObjectType type = GO_NULL, GameObjectSubtype subtype = GO_SUB_NULL);
+GameObject *isPointOverGameObject(float px, float py, GameObjectType type = GO_NULL, GameObjectSubtype subtype = GO_SUB_NULL);
 bool isPointOverColl(float px, float py);
-GameObject *getClosestGameObject(float px, float py, GameObjectType type = GO_NULL, GameObjectSubType subtype = GO_SUB_NULL);
+GameObject *getClosestGameObject(float px, float py, GameObjectType type = GO_NULL, GameObjectSubtype subtype = GO_SUB_NULL, float *returnDist=NULL);
+GameObject *getClosestGameObject(float px, float py, GameObjectType *types=NULL, int typesNum=0, GameObjectSubtype *rejectSubtypes=NULL, int rejectSubtypesNum=0, float *returnDist=NULL);
 
-GameObject *shootBullet(float x, float y, GameObjectSubType subtype, float degrees, float startDist);
-GameObject *createItem(float x, float y, GameObjectSubType subtype);
+GameObject *shootBullet(float x, float y, GameObjectSubtype subtype, float degrees, float startDist);
+GameObject *createItem(float x, float y, GameObjectSubtype subtype);
 
 void drawHpBar(float x, float y, float value, float total);
 
@@ -183,11 +181,11 @@ void update() {
 		firstFrame = true;
 		game = (Game *)malloc(sizeof(Game));
 		memset(game, 0, sizeof(Game));
-		printf("Game struct size: %dkb\n", sizeof(Game)/1024);
+		printf("Game struct size: %likb\n", sizeof(Game)/1024);
 
 		initProfiler(&game->profiler);
 
-		game->player = newGameObject();
+		game->player = newGameObject(GO_PLAYER);
 		game->player->maxHp = game->player->hp = 20;
 		game->currentInv = INV_HANDS;
 		game->gold = 300;
@@ -270,9 +268,7 @@ void update() {
 								break;
 							}
 						} else if (streq(object->name.ptr, "oldManNpc")) {
-							GameObject *npc = newGameObject();
-							npc->type = GO_NPC;
-							npc->subtype = GO_NPC_OLD_MAN;
+							GameObject *npc = newGameObject(GO_NPC, GO_NPC_OLD_MAN);
 							npc->x = object->x;
 							npc->y = object->y;
 							npc->tex = game->oldManNpcTexture;
@@ -570,63 +566,41 @@ void update() {
 					}
 				}
 
-				float playerDist = distanceBetween(enemyCenter.x, enemyCenter.y, playerCenter.x, playerCenter.y);
+				GameObject *target = NULL;
+				Rect chaseRect;
 
-				GameObject *closestTurret = getClosestGameObject(enemyCenter.x, enemyCenter.y, GO_TURRET);
-				float turretDist = 9999999999;
-				if (closestTurret) {
-					turretDist = distanceBetween(
-						enemyCenter.x, enemyCenter.y,
-						closestTurret->x + closestTurret->tex->width/2, closestTurret->y + closestTurret->tex->height/2
-					);
-				}
+				GameObjectType matchTypes[] = {GO_PLAYER, GO_TURRET, GO_NPC, GO_ENEMY};
+				GameObjectSubtype rejectSubtypes[] = {GO_ENEMY_BAT};
 
-				//@cleanup Do these vars even need to be inside the enemy struct? Same with chaseRect
-				enemy->chasingPlayer = false;
-				enemy->targetTurret = NULL;
+				float targetDist = 0;
+				GameObject *possibleTarget = getClosestGameObject(enemyCenter.x, enemyCenter.y, matchTypes, ArrayLength(matchTypes), rejectSubtypes, ArrayLength(rejectSubtypes), &targetDist);
+				if (targetDist < aggroRange) target = possibleTarget;
 
-				bool targetInRange = false;
-				if (playerDist < turretDist && playerDist < aggroRange) {
-					enemy->chasingPlayer = true;
-					enemy->chaseRect.setTo(player->x, player->y, player->tex->width, player->tex->height);
-					targetInRange = true;
-				} else if (turretDist < playerDist && turretDist < aggroRange) {
-					enemy->targetTurret = closestTurret;
-					enemy->chaseRect.setTo(closestTurret->x, closestTurret->y, closestTurret->tex->width, closestTurret->tex->height);
-					targetInRange = true;
-				}
+				if (enemy->attackingTarget && !enemy->attackingTarget->exists) enemy->attackingTarget = NULL;
+				if (enemy->attackingTarget && !target) target = enemy->attackingTarget;
 
-				if (enemy->superAggroTurret) {
-					if (!enemy->superAggroTurret->exists) {
-						enemy->superAggroTurret = NULL;
-					} else if (!enemy->chasingPlayer && !enemy->targetTurret) {
-						targetInRange = true;
-						enemy->targetTurret = enemy->superAggroTurret;
-						enemy->chaseRect.setTo(closestTurret->x, closestTurret->y, closestTurret->tex->width, closestTurret->tex->height);
-					}
-				}
+				if (target) chaseRect.setTo(target->x, target->y, target->tex->width, target->tex->height);
 
-				if (targetInRange) {
+				if (target) {
 					enemy->state = STATE_CHASING;
-					if (enemyRect.intersects(&enemy->chaseRect)) {
+					if (enemyRect.intersects(&chaseRect)) {
 						enemy->state = STATE_ATTACKING;
 					} else {
-						Point chaseCenter = {enemy->chaseRect.x + enemy->chaseRect.width/2, enemy->chaseRect.y + enemy->chaseRect.height/2};
+						Point chaseCenter = {chaseRect.x + chaseRect.width/2, chaseRect.y + chaseRect.height/2};
 						float angle = radsBetween(enemyCenter.x, enemyCenter.y, chaseCenter.x, chaseCenter.y);
 						enemy->x += cos(angle) * chaseSpeed;
 						enemy->y += sin(angle) * chaseSpeed;
 					}
 				}
 
-				if (!targetInRange && (enemy->state == STATE_CHASING || enemy->state == STATE_ATTACKING)) {
+				if (!target && (enemy->state == STATE_CHASING || enemy->state == STATE_ATTACKING)) {
 					enemy->state = STATE_IDLE;
 				}
 
 				if (enemy->state == STATE_ATTACKING) {
 					enemy->attackTime += elapsed;
 					if (enemy->attackTime > attackRate) {
-						if (enemy->chasingPlayer) player->hp -= attackDamage;
-						if (enemy->targetTurret) enemy->targetTurret->hp -= attackDamage;
+						target->hp -= attackDamage;
 						enemy->attackTime = 0;
 					}
 				}
@@ -671,7 +645,7 @@ void update() {
 
 					if (bulletRect.intersects(&enemyRect)) {
 						bullet->exists = false;
-						if (!closestEnemy->superAggroTurret) closestEnemy->superAggroTurret = bullet->sourceTurret;
+						if (!closestEnemy->attackingTarget) closestEnemy->attackingTarget = bullet->sourceTurret;
 						closestEnemy->hp -= bullet->damage;
 					}
 				}
@@ -1061,12 +1035,14 @@ void update() {
 	profiler->endProfile("Render");
 }
 
-GameObject *newGameObject() {
+GameObject *newGameObject(GameObjectType type, GameObjectSubtype subtype) {
 	for (int i = 0; i < GAME_OBJECTS_MAX; i++) {
 		GameObject *go = &game->gameObjects[i];
 		if (!go->exists) {
 			memset(go, 0, sizeof(GameObject));
 			go->exists = true;
+			go->type = type;
+			go->subtype = subtype;
 			go->alpha = 1;
 			return go;
 		}
@@ -1089,10 +1065,9 @@ void drawHpBar(float x, float y, float value, float total) {
 }
 
 GameObject *buildTurret(int x, int y, InvType type) {
-	GameObject *turret = newGameObject();
+	GameObject *turret = newGameObject(GO_TURRET);
 	turret->x = x;
 	turret->y = y;
-	turret->type = GO_TURRET;
 
 	if (type == INV_TURRET_BASIC) {
 		turret->subtype = GO_TURRET_BASIC;
@@ -1105,11 +1080,10 @@ GameObject *buildTurret(int x, int y, InvType type) {
 	return turret;
 }
 
-GameObject *spawnEnemy(float x, float y, GameObjectSubType subtype) {
-	GameObject *enemy = newGameObject();
+GameObject *spawnEnemy(float x, float y, GameObjectSubtype subtype) {
+	GameObject *enemy = newGameObject(GO_ENEMY);
 	enemy->spawnTime = platform->time;
 
-	enemy->type = GO_ENEMY;
 	enemy->subtype = subtype;
 
 	if (subtype == GO_ENEMY_BAT) {
@@ -1128,7 +1102,7 @@ GameObject *spawnEnemy(float x, float y, GameObjectSubType subtype) {
 	return enemy;
 }
 
-GameObject *isRectOverGameObject(Rect *rect, GameObjectType type, GameObjectSubType subtype) {
+GameObject *isRectOverGameObject(Rect *rect, GameObjectType type, GameObjectSubtype subtype) {
 	Rect otherRect;
 	for (int i = 0; i < GAME_OBJECTS_MAX; i++) {
 		GameObject *go = &game->gameObjects[i];
@@ -1143,7 +1117,7 @@ GameObject *isRectOverGameObject(Rect *rect, GameObjectType type, GameObjectSubT
 	return NULL;
 }
 
-GameObject *isPointOverGameObject(float px, float py, GameObjectType type, GameObjectSubType subtype) {
+GameObject *isPointOverGameObject(float px, float py, GameObjectType type, GameObjectSubtype subtype) {
 	Rect otherRect;
 	for (int i = 0; i < GAME_OBJECTS_MAX; i++) {
 		GameObject *go = &game->gameObjects[i];
@@ -1169,7 +1143,7 @@ bool isPointOverColl(float px, float py) {
 	return false;
 }
 
-GameObject *getClosestGameObject(float px, float py, GameObjectType type, GameObjectSubType subtype) {
+GameObject *getClosestGameObject(float px, float py, GameObjectType type, GameObjectSubtype subtype, float *returnDist) {
 	GameObject *closest = NULL;
 	float dist = 0;
 
@@ -1186,13 +1160,45 @@ GameObject *getClosestGameObject(float px, float py, GameObjectType type, GameOb
 		}
 	}
 
+	if (returnDist) *returnDist = dist;
 	return closest;
 }
 
-GameObject *shootBullet(float x, float y, GameObjectSubType subtype, float degrees, float startDist) {
-	GameObject *bullet = newGameObject();
+GameObject *getClosestGameObject(float px, float py, GameObjectType *types, int typesNum, GameObjectSubtype *rejectSubtypes, int rejectSubtypesNum, float *returnDist) {
+	GameObject *closest = NULL;
+	float dist = 0;
 
-	bullet->type = GO_BULLET;
+	for (int i = 0; i < GAME_OBJECTS_MAX; i++) {
+		GameObject *go = &game->gameObjects[i];
+		if (!go->exists) continue;
+
+		bool matchesType = false;
+		bool matchesSubtype = true;
+
+		for (int j = 0; j < typesNum; j++)
+			if (go->type == types[j])
+				matchesType = true;
+
+		for (int j = 0; j < rejectSubtypesNum; j++)
+			if (go->subtype == rejectSubtypes[j])
+				matchesSubtype = false;
+
+		if (!matchesType || !matchesSubtype) continue;
+
+		float curDist = distanceBetween(px, py, go->x + go->tex->width/2, go->y + go->tex->height/2);
+		if (curDist < dist || closest == NULL) {
+			dist = curDist;
+			closest = go;
+		}
+	}
+
+	if (returnDist) *returnDist = dist;
+	return closest;
+}
+
+GameObject *shootBullet(float x, float y, GameObjectSubtype subtype, float degrees, float startDist) {
+	GameObject *bullet = newGameObject(GO_BULLET);
+
 	bullet->subtype = subtype;
 	bullet->rotation = degrees;
 
@@ -1208,9 +1214,8 @@ GameObject *shootBullet(float x, float y, GameObjectSubType subtype, float degre
 	return bullet;
 }
 
-GameObject *createItem(float x, float y, GameObjectSubType subtype) {
-	GameObject *item = newGameObject();
-	item->type = GO_ITEM;
+GameObject *createItem(float x, float y, GameObjectSubtype subtype) {
+	GameObject *item = newGameObject(GO_ITEM);
 	item->subtype = subtype;
 	item->x = x;
 	item->y = y;
