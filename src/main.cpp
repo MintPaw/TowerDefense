@@ -16,7 +16,7 @@
 #define ENEMIES_PER_SPAWNER_MAX 256
 #define GAME_OBJECTS_MAX 8192
 
-enum InvType { INV_START, INV_HANDS, INV_TURRET_BASIC, INV_END };
+enum InvType { INV_START=0, INV_HANDS, INV_TURRET_BASIC, INV_WALL, INV_END };
 enum SpawnerType { SPAWNER_BAT, SPAWNER_GAURD };
 enum EnemyState { STATE_IDLE=0, STATE_MOVING, STATE_CHASING, STATE_ATTACKING };
 enum DayPhase { DAY_DAWN, DAY_MID, DAY_DUSK, DAY_NIGHT };
@@ -113,6 +113,7 @@ struct Game {
 
 	InvType currentInv;
 	Texture *selecterTexture;
+	Text invText;
 
 	Text debugText;
 
@@ -215,6 +216,7 @@ void update() {
 		initText(&game->goldText, 512, 256);
 		initText(&game->dialogText, 512, 512);
 		initText(&game->timeText, 512, 512);
+		initText(&game->invText, 512, 512);
 
 		{ /// Setup map
 			void *mapData;
@@ -428,8 +430,8 @@ void update() {
 	profiler->startProfile("Update Inventory");
 	{ /// Inventory
 		InvType newInv = game->currentInv;
-		if (invLeft) newInv = (InvType)(game->currentInv + 1);
-		if (invRight) newInv = (InvType)(game->currentInv - 1);
+		if (invLeft) newInv = (InvType)(game->currentInv - 1);
+		if (invRight) newInv = (InvType)(game->currentInv + 1);
 
 		if (newInv <= INV_START) newInv = (InvType)(INV_END-1);
 		if (newInv >= INV_END) newInv = (InvType)(INV_START+1);
@@ -441,6 +443,7 @@ void update() {
 			if (game->selecterTexture != NULL) destroyTexture(game->selecterTexture);
 			if (game->currentInv == INV_HANDS) selecterSize.setTo(1, 1);
 			if (game->currentInv == INV_TURRET_BASIC) selecterSize.setTo(3, 3);
+			if (game->currentInv == INV_WALL) selecterSize.setTo(1, 1);
 
 			if (selecterSize.x == 1 && selecterSize.y == 1) game->selecterTexture = uploadPngTexturePath("assets/sprites/1x1selecter.png");
 			if (selecterSize.x == 3 && selecterSize.y == 3) game->selecterTexture = uploadPngTexturePath("assets/sprites/3x3selecter.png");
@@ -797,6 +800,8 @@ void update() {
 					turret->turretInvestment = turretPrice;
 					game->gold -= turretPrice;
 				}
+			} else if (game->currentInv == INV_WALL) {
+				// Build wall
 			} else if (game->currentInv == INV_HANDS) {
 				if (selecterValid) {
 					game->selectedTurret = selecterOverTurret;
@@ -870,15 +875,24 @@ void update() {
 			);
 		}
 
+		drawText(&game->goldText, game->mainFont, "Gold: %d", game->gold);
+
 		bool pm = false;
-		
 		if (hours == 0) hours = 12;
 		else if (hours > 11) pm = true;
-
 		if (hours > 12) hours -= 12;
 
-		drawText(&game->goldText, game->mainFont, "Gold: %d", game->gold);
-		drawText(&game->timeText, game->mainFont, "Day %d\n%d:%02d %s\n", game->day, hours, minutes, pm ? "pm" : "am");
+		drawText(&game->timeText, game->mainFont, "Day %d\n%d:%02d %s", game->day, hours, minutes, pm ? "pm" : "am");
+
+		drawText(
+			&game->invText,
+			game->mainFont,
+			"Item - %s",
+			game->currentInv == INV_HANDS ? "Hands" :
+			game->currentInv == INV_TURRET_BASIC ? "Basic Turret" :
+			game->currentInv == INV_WALL ? "Wall" :
+			"Invalid item"
+		);
 	}
 	profiler->endProfile("Update Hud");
 
@@ -988,6 +1002,15 @@ void update() {
 			drawSpriteEx(&def);
 		}
 
+		{ /// Inventory text
+			defaultSpriteDef(&def);
+			def.tex = game->invText.tex;
+			def.pos.x = platform->windowWidth/2 - game->invText.width/2;
+			def.pos.y = platform->windowHeight - game->invText.height;
+			def.scrollFactor.setTo(0, 0);
+			drawSpriteEx(&def);
+		}
+
 		{ /// Dialog text
 			if (dialog) {
 				defaultSpriteDef(&def);
@@ -1067,6 +1090,7 @@ GameObject *buildTurret(int x, int y, InvType type) {
 	GameObject *turret = newGameObject(GO_TURRET);
 	turret->x = x;
 	turret->y = y;
+	turret->alpha = 0;
 
 	if (type == INV_TURRET_BASIC) {
 		turret->subtype = GO_TURRET_BASIC;
