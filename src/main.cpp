@@ -17,12 +17,19 @@
 #define GAME_OBJECTS_MAX 8192
 
 enum InvType { INV_START=0, INV_HANDS, INV_TURRET_BASIC, INV_WALL, INV_END };
-enum SpawnerType { SPAWNER_BAT, SPAWNER_GAURD };
+enum SpawnerType { SPAWNER_BAT, SPAWNER_GAURD, SPAWNER_WOLF, SPAWNER_GENIE };
 enum EnemyState { STATE_IDLE=0, STATE_MOVING, STATE_CHASING, STATE_ATTACKING };
 enum DayPhase { DAY_DAWN, DAY_MID, DAY_DUSK, DAY_NIGHT };
 
 enum GameObjectType { GO_NULL = 0, GO_PLAYER, GO_TURRET, GO_ENEMY, GO_BULLET, GO_ITEM, GO_NPC, GO_WALL };
-enum GameObjectSubtype { GO_SUB_NULL = 0, GO_TURRET_BASIC, GO_ENEMY_BAT, GO_ENEMY_GAURD, GO_BULLET_BASIC, GO_ITEM_GOLD, GO_NPC_OLD_MAN };
+enum GameObjectSubtype {
+	GO_SUB_NULL = 0,
+	GO_TURRET_BASIC,
+	GO_ENEMY_BAT, GO_ENEMY_GAURD, GO_ENEMY_WOLF, GO_ENEMY_GENIE,
+	GO_BULLET_BASIC,
+	GO_ITEM_GOLD,
+	GO_NPC_OLD_MAN
+};
 
 struct GameObject {
 	bool exists;
@@ -91,6 +98,8 @@ struct Game {
 
 	Texture *enemyBatTexture;
 	Texture *enemyGaurdTexture;
+	Texture *enemyWolfTexture;
+	Texture *enemyGenieTexture;
 
 	Texture *bulletBasicTexture;
 
@@ -206,6 +215,8 @@ void update() {
 
 		game->enemyBatTexture = uploadPngTexturePath("assets/sprites/enemyBat.png");
 		game->enemyGaurdTexture = uploadPngTexturePath("assets/sprites/enemyGaurd.png");
+		game->enemyWolfTexture = uploadPngTexturePath("assets/sprites/enemyWolf.png");
+		game->enemyGenieTexture = uploadPngTexturePath("assets/sprites/enemyGenie.png");
 
 		game->bulletBasicTexture = uploadPngTexturePath("assets/sprites/bulletBasic.png");
 
@@ -257,6 +268,8 @@ void update() {
 
 								if (streq(object->type.ptr, "bat")) spawner->type = SPAWNER_BAT;
 								if (streq(object->type.ptr, "gaurd")) spawner->type = SPAWNER_GAURD;
+								if (streq(object->type.ptr, "wolf")) spawner->type = SPAWNER_WOLF;
+								if (streq(object->type.ptr, "genie")) spawner->type = SPAWNER_GENIE;
 
 								for (int j = 0; j < object->property_count; j++) {
 									tinytiled_property_t *prop = &object->properties[j];
@@ -533,7 +546,7 @@ void update() {
 
 					attackRate = 1;
 					attackDamage = 3;
-					goldGiven = 10;
+					goldGiven = 30;
 				} else if (enemy->subtype == GO_ENEMY_GAURD) {
 					idleLimit = 10;
 					moveSpeed = 0.3;
@@ -545,7 +558,31 @@ void update() {
 
 					attackRate = 3;
 					attackDamage = 2;
-					goldGiven = 30;
+					goldGiven = 50;
+				} else if (enemy->subtype == GO_ENEMY_WOLF) {
+					idleLimit = 3;
+					moveSpeed = 3;
+					chaseSpeed = 5;
+					moveDistMin = 32;
+					moveDistMax = 32*3;
+
+					aggroRange = 32*5;
+
+					attackRate = 5;
+					attackDamage = 6;
+					goldGiven = 50;
+				} else if (enemy->subtype == GO_ENEMY_GENIE) {
+					idleLimit = 10;
+					moveSpeed = 2;
+					chaseSpeed = 2;
+					moveDistMin = 32;
+					moveDistMax = 32*3;
+
+					aggroRange = 32*3;
+
+					attackRate = 0.1;
+					attackDamage = 0.1;
+					goldGiven = 50;
 				}
 
 				moveSpeed *= game->timeScale;
@@ -840,6 +877,8 @@ void update() {
 
 				if (spawner->type == SPAWNER_BAT) enemy = spawnEnemy(spawnPoint.x, spawnPoint.y, GO_ENEMY_BAT);
 				if (spawner->type == SPAWNER_GAURD) enemy = spawnEnemy(spawnPoint.x, spawnPoint.y, GO_ENEMY_GAURD);
+				if (spawner->type == SPAWNER_WOLF) enemy = spawnEnemy(spawnPoint.x, spawnPoint.y, GO_ENEMY_WOLF);
+				if (spawner->type == SPAWNER_GENIE) enemy = spawnEnemy(spawnPoint.x, spawnPoint.y, GO_ENEMY_GENIE);
 
 				for (int j = 0; j < ENEMIES_PER_SPAWNER_MAX; j++) {
 					if (!spawner->enemies[j]) {
@@ -1145,6 +1184,16 @@ GameObject *spawnEnemy(float x, float y, GameObjectSubtype subtype) {
 	if (subtype == GO_ENEMY_GAURD) {
 		enemy->tex = game->enemyGaurdTexture;
 		enemy->maxHp = enemy->hp = 200;
+	}
+
+	if (subtype == GO_ENEMY_WOLF) {
+		enemy->tex = game->enemyWolfTexture;
+		enemy->maxHp = enemy->hp = 100;
+	}
+
+	if (subtype == GO_ENEMY_GENIE) {
+		enemy->tex = game->enemyGenieTexture;
+		enemy->maxHp = enemy->hp = 100;
 	}
 
 	enemy->x = x - enemy->tex->width/2;
