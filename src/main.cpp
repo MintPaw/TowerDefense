@@ -484,8 +484,6 @@ void update() {
 			if (go->type == GO_TURRET) {
 				GameObject *turret = go;
 
-				Point turretCenter = {turret->x + (float)turret->tex->width/2, turret->y + (float)turret->tex->height/2};
-
 				float turretRange, turretRate, turretDamage;
 				if (turret->subtype == GO_TURRET_BASIC) {
 					turretRange = 320;
