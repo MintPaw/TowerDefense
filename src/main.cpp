@@ -557,8 +557,8 @@ void update() {
 
 					aggroRange = 32*3;
 
-					attackRate = 3;
-					attackDamage = 2;
+					attackRate = 2;
+					attackDamage = 3;
 					goldGiven = 50;
 					attackRange = 10;
 				} else if (enemy->subtype == GO_ENEMY_WOLF) {
@@ -570,8 +570,8 @@ void update() {
 
 					aggroRange = 32*5;
 
-					attackRate = 5;
-					attackDamage = 6;
+					attackRate = 3;
+					attackDamage = 4;
 					goldGiven = 50;
 					attackRange = 10;
 				} else if (enemy->subtype == GO_ENEMY_GENIE) {
@@ -1000,8 +1000,9 @@ void update() {
 				def.pos.x += cos((platform->time - go->spawnTime)*floatSpeedX) * floatDistX;
 				def.pos.y += cos((platform->time - go->spawnTime)*floatSpeedY) * floatDistY;
 
-				if (go->state == STATE_CHASING) def.tint = 0x88FF0000;
 			}
+			if (go->state == STATE_CHASING) def.tint = 0x44FF0000;
+			if (go->state == STATE_ATTACKING) def.tint = 0xAAFF0000;
 			drawSpriteEx(&def);
 
 			if (go->type == GO_TURRET) {
