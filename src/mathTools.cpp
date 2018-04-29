@@ -84,6 +84,47 @@ bool Rect::intersects(Rect *other) {
 bool Rect::containsPoint(Point *point) { return pointInRect(point->x, point->y, this->x, this->y, this->width, this->height); }
 bool Rect::containsPoint(float px, float py) { return pointInRect(px, py, this->x, this->y, this->width, this->height); }
 
+
+float Rect::distanceToPerimeter(float px, float py) {
+	Rect *rect = this;
+	float l = rect->x;
+	float t = rect->y;
+	float r = rect->x + rect->width;
+	float b = rect->y + rect->height;
+
+	float x = Clamp(px, l, r);
+	float y = Clamp(py, t, b);
+
+	float dl = fabs(x-l);
+	float dr = fabs(x-r);
+	float dt = fabs(y-t);
+	float db = fabs(y-b);
+
+	float m;
+	m = Min(dl, dr);
+	m = Min(m, dt);
+	m = Min(m, db);
+
+	float minX;
+	float minY;
+
+	if (m == dt) {
+		minX = x;
+		minY = t;
+	} else if (m == db) {
+		minX = x;
+		minY = b;
+	} else if (m == dl) {
+		minX = l;
+		minY = y;
+	} else {
+		minX = r;
+		minY = y;
+	}
+
+	return distanceBetween(minX, minY, px, py);
+}
+
 void Rect::randomPoint(Point *point) {
 	point->x = rndFloat(this->x, this->x + this->width);
 	point->y = rndFloat(this->y, this->y + this->height);

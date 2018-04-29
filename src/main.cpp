@@ -533,7 +533,7 @@ void update() {
 				Point enemyCenter = {enemy->x + enemy->tex->width/2, enemy->y + enemy->tex->height/2};
 				Rect enemyRect = {enemy->x, enemy->y, (float)enemy->tex->width, (float)enemy->tex->height};
 
-				float idleLimit, moveSpeed, chaseSpeed, moveDistMin, moveDistMax, aggroRange, attackRate, attackDamage, goldGiven;
+				float idleLimit, moveSpeed, chaseSpeed, moveDistMin, moveDistMax, aggroRange, attackRate, attackDamage, goldGiven, attackRange;
 				if (enemy->subtype == GO_ENEMY_BAT) {
 					idleLimit = 3;
 					moveSpeed = 1;
@@ -547,6 +547,7 @@ void update() {
 					attackRate = 1;
 					attackDamage = 3;
 					goldGiven = 30;
+					attackRange = 0;
 				} else if (enemy->subtype == GO_ENEMY_GAURD) {
 					idleLimit = 10;
 					moveSpeed = 0.3;
@@ -559,6 +560,7 @@ void update() {
 					attackRate = 3;
 					attackDamage = 2;
 					goldGiven = 50;
+					attackRange = 0;
 				} else if (enemy->subtype == GO_ENEMY_WOLF) {
 					idleLimit = 3;
 					moveSpeed = 3;
@@ -571,6 +573,7 @@ void update() {
 					attackRate = 5;
 					attackDamage = 6;
 					goldGiven = 50;
+					attackRange = 0;
 				} else if (enemy->subtype == GO_ENEMY_GENIE) {
 					idleLimit = 10;
 					moveSpeed = 2;
@@ -583,6 +586,7 @@ void update() {
 					attackRate = 0.1;
 					attackDamage = 0.1;
 					goldGiven = 50;
+					attackRange = 32*3;
 				}
 
 				moveSpeed *= game->timeScale;

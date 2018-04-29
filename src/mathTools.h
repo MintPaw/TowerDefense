@@ -4,6 +4,7 @@
 #define Max(x, y) ((x) > (y) ? (x) : (y))
 #define PI 3.14159
 #define ArrayLength(x) ((sizeof(x)/sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
+#define Clamp(x, min, max) ((x) < (min) ? (min) : (x) > (max) ? (max) : (x))
 
 struct Rect;
 struct Matrix;
@@ -32,6 +33,7 @@ struct Rect {
 	bool intersects(Rect *other);
 	bool containsPoint(Point *point);
 	bool containsPoint(float px, float py);
+	float distanceToPerimeter(float px, float py);
 	void randomPoint(Point *point);
 	void print();
 };
