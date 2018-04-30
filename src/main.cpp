@@ -461,10 +461,11 @@ void update() {
 
 			if (game->selecterTexture != NULL) destroyTexture(game->selecterTexture);
 			if (game->currentInv == INV_HANDS) selecterSize.setTo(1, 1);
-			if (game->currentInv == INV_TURRET_BASIC) selecterSize.setTo(3, 3);
+			if (game->currentInv == INV_TURRET_BASIC) selecterSize.setTo(2, 2);
 			if (game->currentInv == INV_WALL) selecterSize.setTo(1, 1);
 
 			if (selecterSize.x == 1 && selecterSize.y == 1) game->selecterTexture = uploadPngTexturePath("assets/sprites/1x1selecter.png");
+			if (selecterSize.x == 2 && selecterSize.y == 2) game->selecterTexture = uploadPngTexturePath("assets/sprites/2x2selecter.png");
 			if (selecterSize.x == 3 && selecterSize.y == 3) game->selecterTexture = uploadPngTexturePath("assets/sprites/3x3selecter.png");
 		}
 	}
